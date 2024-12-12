@@ -1,9 +1,10 @@
-﻿using Konscious.Security.Cryptography;
+﻿using Konscious.Security.Cryptography;   // Hashing library
+using System.Text;                      // Encoding support
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 using SIAMS.Models;
-using System.Text;
+
 
 namespace SIAMS.Controllers
 {
@@ -42,8 +43,16 @@ namespace SIAMS.Controllers
 
             return RedirectToAction("Login", "Account");
         }
+        // Displays the login form (GET)
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();  // Renders the Login.cshtml view
+        }
 
+        // Handles form submission (POST)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -55,30 +64,32 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
+            // Verify Password with Argon2
             var inputHash = HashPasswordArgon2(model.Password);
-
             if (inputHash != user.PasswordHash)
             {
                 ModelState.AddModelError("", "Invalid username or password.");
                 return View(model);
             }
 
-            // Redirect to Home on success
+            // Login successful, redirect to home
             return RedirectToAction("Index", "Home");
         }
 
         // Helper Method for Argon2 Hashing
         private static string HashPasswordArgon2(string password)
         {
+            // Use Argon2id for password hashing
             using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
 
-            // Argon2 Parameters (Recommended settings for security)
+            // Configure Argon2 settings
             argon2.Salt = Encoding.UTF8.GetBytes("YourSecureSaltValueHere");
-            argon2.DegreeOfParallelism = 8;   // Multithreading
-            argon2.MemorySize = 65536;       // 64 MB
-            argon2.Iterations = 4;           // Number of passes
+            argon2.DegreeOfParallelism = 8;   // Number of threads
+            argon2.MemorySize = 65536;        // Memory in KB (64MB)
+            argon2.Iterations = 4;            // Number of passes
 
-            var hashBytes = argon2.GetBytes(32); // Output size
+            // Generate the hash
+            var hashBytes = argon2.GetBytes(32);  // 32-byte hash
             return Convert.ToBase64String(hashBytes);
         }
     }

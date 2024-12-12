@@ -22,8 +22,23 @@
     </div>
 
     <div class="form-group">
+        <label asp-for="Email"></label>
+        <input asp-for="Email" type="email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
         <label asp-for="Password"></label>
         <input asp-for="Password" type="password" class="form-control" />
+         <small class="form-text text-muted">
+            Your password must be at least 8 characters long and include:
+            <ul>
+                <li>At least one uppercase letter</li>
+                <li>At least one lowercase letter</li>
+                <li>At least one number</li>
+                <li>At least one special character (e.g., ! # ?)</li>
+            </ul>
+        </small>
         <span asp-validation-for="Password" class="text-danger"></span>
     </div>
 

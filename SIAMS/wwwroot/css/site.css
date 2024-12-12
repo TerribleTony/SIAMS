@@ -42,3 +42,25 @@ footer {
     padding: 1rem 0;
     text-align: center;
 }
+
+/* Center page content */
+.vh-100 {
+    height: 100vh !important;
+}
+
+/* Custom Button Colors */
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+    }
+
+/* Custom Text Colors */
+.text-primary {
+    color: #007bff !important;
+}
+

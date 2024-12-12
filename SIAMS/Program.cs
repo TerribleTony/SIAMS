@@ -16,11 +16,21 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";  
     });
 
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+// Run the seeders
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    context.Database.Migrate(); // Ensures the DB is up-to-date
+    DbInitializer.Seed(context); // Seeds default data
+}
+
 
 // Middleware
 if (!app.Environment.IsDevelopment())

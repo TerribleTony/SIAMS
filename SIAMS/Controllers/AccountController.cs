@@ -18,32 +18,52 @@ namespace SIAMS.Controllers
             _context = context;
         }
 
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        private bool IsValidPassword(string password)
+        {
+            return password.Length >= 8 &&
+                   password.Any(char.IsUpper) &&
+                   password.Any(char.IsLower) &&
+                   password.Any(char.IsDigit) &&
+                   password.Any(ch => "!@#$%^&*()_+|<>?".Contains(ch));
+        }
+
         // Registration Logic
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
+            //if (!ModelState.IsValid)
+            //{
+            //    ViewData["Feedback"] = "Please correct the errors and try again.";
+            //    return View(model);
+            //}
 
-            // Check if the username already exists
+            if (!IsValidPassword(model.Password))
+            {
+                ViewData["Feedback"] = "Password does not meet security requirements.";
+                return View(model);
+            }
+
             if (await _context.Users.AnyAsync(u => u.Username == model.Username))
             {
                 ViewData["Feedback"] = "The username is already taken. Please choose a different one.";
                 return View(model);
             }
 
-            if (!ModelState.IsValid)
-            {
-                ViewData["Feedback"] = "Please correct the errors and try again.";
-                return View(model);
-            }           
-
-            // Hash the password and save the user
             var hashedPassword = HashPasswordArgon2(model.Password);
 
             var user = new User
             {
                 Username = model.Username,
                 PasswordHash = hashedPassword,
+                Email = model.Email,
                 Role = "User"
             };
 

@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Konscious.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using SIAMS.Models;
+using System.Text;
 
 namespace SIAMS.Data
 {
@@ -19,18 +21,46 @@ namespace SIAMS.Data
     {
         public static void Seed(ApplicationDbContext context)
         {
+            // Ensure the database is created
+            context.Database.Migrate();
+
             // Check if users already exist
             if (context.Users.Any()) return;
 
             // Add default users
             context.Users.AddRange(
-                new User { Username = "admin", PasswordHash = "adminhashed", Role = "Admin" },
-                new User { Username = "user1", PasswordHash = "user1hashed", Role = "User" },
-                new User { Username = "user2", PasswordHash = "user2hashed", Role = "User" }
+                new User
+                {
+                    Username = "admin1",
+                    PasswordHash = HashPassword("Admin1SecurePassword"),
+                    Salt = "RandomSaltValue1",
+                    Role = "Admin",
+                    Email = "admin1@example.com"
+                },
+                new User
+                {
+                    Username = "admin2",
+                    PasswordHash = HashPassword("Admin2SecurePassword"),
+                    Salt = "RandomSaltValue2",
+                    Role = "Admin",
+                    Email = "admin2@example.com"
+                }
             );
 
             context.SaveChanges();
         }
+
+        // Password Hashing Method
+        private static string HashPassword(string password)
+        {
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
+            argon2.Salt = Encoding.UTF8.GetBytes("YourSecureSaltValueHere");
+            argon2.DegreeOfParallelism = 8;   // Number of threads
+            argon2.MemorySize = 65536;        // Memory in KB (64MB)
+            argon2.Iterations = 4;            // Number of passes
+
+            var hashBytes = argon2.GetBytes(32);  // 32-byte hash
+            return Convert.ToBase64String(hashBytes);
+        }
     }
 }
-

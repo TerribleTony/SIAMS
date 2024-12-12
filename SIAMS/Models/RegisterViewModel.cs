@@ -16,5 +16,7 @@ namespace SIAMS.Models
         [DataType(DataType.Password)]
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
     }
 }

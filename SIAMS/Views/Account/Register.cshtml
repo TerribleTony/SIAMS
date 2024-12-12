@@ -6,6 +6,14 @@
 
 <h2>Create Account</h2>
 
+<!-- Feedback Alert Section -->
+@if (ViewData["Feedback"] != null)
+{
+    <div class="alert alert-info">
+        @ViewData["Feedback"]
+    </div>
+}
+
 <form asp-controller="Account" asp-action="Register" method="post" class="form">
     <div class="form-group">
         <label asp-for="Username"></label>

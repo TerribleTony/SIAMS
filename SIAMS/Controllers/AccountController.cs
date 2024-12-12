@@ -20,16 +20,24 @@ namespace SIAMS.Controllers
 
         // Registration Logic
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
-            if (!ModelState.IsValid) return View(model);
 
+            // Check if the username already exists
             if (await _context.Users.AnyAsync(u => u.Username == model.Username))
             {
-                ModelState.AddModelError("", "Username already exists.");
+                ViewData["Feedback"] = "The username is already taken. Please choose a different one.";
                 return View(model);
             }
 
+            if (!ModelState.IsValid)
+            {
+                ViewData["Feedback"] = "Please correct the errors and try again.";
+                return View(model);
+            }           
+
+            // Hash the password and save the user
             var hashedPassword = HashPasswordArgon2(model.Password);
 
             var user = new User
@@ -42,7 +50,14 @@ namespace SIAMS.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            ViewData["Feedback"] = "Registration successful! You can now log in.";
             return RedirectToAction("Login", "Account");
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View();  // Renders the Register.cshtml view
         }
 
         // Display Login Page (GET)

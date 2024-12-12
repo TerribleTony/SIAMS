@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Register database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

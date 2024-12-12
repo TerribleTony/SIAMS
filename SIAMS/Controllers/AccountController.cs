@@ -1,10 +1,11 @@
-﻿using Konscious.Security.Cryptography;   // Hashing library
-using System.Text;                      // Encoding support
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using Konscious.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 using SIAMS.Models;
-
 
 namespace SIAMS.Controllers
 {
@@ -17,6 +18,7 @@ namespace SIAMS.Controllers
             _context = context;
         }
 
+        // Registration Logic
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -28,7 +30,6 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
-            // Generate Argon2 Hash
             var hashedPassword = HashPasswordArgon2(model.Password);
 
             var user = new User
@@ -43,14 +44,15 @@ namespace SIAMS.Controllers
 
             return RedirectToAction("Login", "Account");
         }
-        // Displays the login form (GET)
+
+        // Display Login Page (GET)
         [HttpGet]
         public IActionResult Login()
         {
             return View();  // Renders the Login.cshtml view
         }
 
-        // Handles form submission (POST)
+        // Handle Login Form Submission (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -58,37 +60,45 @@ namespace SIAMS.Controllers
             if (!ModelState.IsValid) return View(model);
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
-            if (user == null)
+            if (user == null || HashPasswordArgon2(model.Password) != user.PasswordHash)
             {
                 ModelState.AddModelError("", "Invalid username or password.");
                 return View(model);
             }
 
-            // Verify Password with Argon2
-            var inputHash = HashPasswordArgon2(model.Password);
-            if (inputHash != user.PasswordHash)
+            // Create Authentication Cookie
+            var claims = new List<System.Security.Claims.Claim>
             {
-                ModelState.AddModelError("", "Invalid username or password.");
-                return View(model);
-            }
+                new(System.Security.Claims.ClaimTypes.Name, user.Username),
+                new(System.Security.Claims.ClaimTypes.Role, user.Role)
+            };
 
-            // Login successful, redirect to home
+            var identity = new System.Security.Claims.ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
             return RedirectToAction("Index", "Home");
         }
 
-        // Helper Method for Argon2 Hashing
+        // Logout Logic
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Login", "Account");
+        }
+
+        // Password Hashing Helper Method
         private static string HashPasswordArgon2(string password)
         {
-            // Use Argon2id for password hashing
             using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
-
-            // Configure Argon2 settings
             argon2.Salt = Encoding.UTF8.GetBytes("YourSecureSaltValueHere");
             argon2.DegreeOfParallelism = 8;   // Number of threads
             argon2.MemorySize = 65536;        // Memory in KB (64MB)
             argon2.Iterations = 4;            // Number of passes
 
-            // Generate the hash
             var hashBytes = argon2.GetBytes(32);  // 32-byte hash
             return Convert.ToBase64String(hashBytes);
         }

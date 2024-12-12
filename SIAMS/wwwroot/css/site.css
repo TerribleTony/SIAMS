@@ -20,3 +20,25 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* Sticky Footer CSS */
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+#page-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#content-wrap {
+    flex: 1;
+}
+
+footer {
+    background: #f8f9fa;
+    padding: 1rem 0;
+    text-align: center;
+}

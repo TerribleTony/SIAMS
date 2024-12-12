@@ -11,7 +11,7 @@ using SIAMS.Models;
 
 namespace SIAMS.Controllers
 {
-   // [Authorize] // Apply authorization to the entire controller
+    [Authorize] // Apply authorization to the entire controller
     public class AssetsController : Controller
     {
         private readonly ApplicationDbContext _context;

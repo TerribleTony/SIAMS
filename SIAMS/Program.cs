@@ -1,24 +1,26 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register database and services
-builder.Services.AddControllersWithViews();
+// Register database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register authentication services
-builder.Services.AddAuthentication("CookieAuth")
-    .AddCookie("CookieAuth", config =>
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
-        config.Cookie.Name = "UserAuthCookie";
-        config.LoginPath = "/Home/Login";
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
     });
+
+builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// Middleware
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -27,10 +29,9 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
-app.UseAuthentication();
+app.UseAuthentication(); // Add this
 app.UseAuthorization();
 
 app.MapControllerRoute(

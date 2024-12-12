@@ -1,14 +1,18 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SIAMS.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure PostgreSQL database connection
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                     ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
-// Register database context
+// Register the database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString, opt =>
+        opt.MigrationsAssembly("SIAMS"))); // Ensure migrations work
 
 // Register authentication services
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -16,23 +20,35 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
-        options.AccessDeniedPath = "/Account/AccessDenied";  
+        options.AccessDeniedPath = "/Account/AccessDenied";
     });
 
+// Add services to the container
 builder.Services.AddControllersWithViews();
 
+// Enable detailed logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+// Build the app
 var app = builder.Build();
 
-// Run the seeders
+// Apply migrations and seed data
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    context.Database.Migrate(); // Ensures the DB is up-to-date
-    DbInitializer.Seed(context); // Seeds default data
+    try
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        context.Database.Migrate(); // Ensure the database is updated
+        DbInitializer.Seed(context); // Seed initial data
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration or seeding failed: {ex.Message}");
+    }
 }
 
-
-// Middleware
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -43,7 +59,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-app.UseAuthentication(); // Add this
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

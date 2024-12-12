@@ -5,14 +5,27 @@ using SIAMS.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure PostgreSQL database connection
+// Determine the correct connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                      ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
-// Register the database context
+// Parse connection string from Render if needed
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+{
+    var uri = new Uri(connectionString);
+    var dbUser = uri.UserInfo.Split(':')[0];
+    var dbPass = uri.UserInfo.Split(':')[1];
+    var host = uri.Host;
+    var port = uri.Port;
+    var dbName = uri.AbsolutePath.Trim('/');
+
+    connectionString = $"Host={host};Port={port};Database={dbName};Username={dbUser};Password={dbPass};SSL Mode=Require;Trust Server Certificate=true;";
+}
+
+// Register database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, opt =>
-        opt.MigrationsAssembly("SIAMS"))); // Ensure migrations work
+        opt.MigrationsAssembly("SIAMS")));
 
 // Register authentication services
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -23,10 +36,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Account/AccessDenied";
     });
 
-// Add services to the container
+// Add MVC services
 builder.Services.AddControllersWithViews();
 
-// Enable detailed logging
+// Enable logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
@@ -39,8 +52,8 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate(); // Ensure the database is updated
-        DbInitializer.Seed(context); // Seed initial data
+        context.Database.Migrate(); // Ensure DB schema is up-to-date
+        DbInitializer.Seed(context); // Seed default data
     }
     catch (Exception ex)
     {
@@ -48,7 +61,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Configure the HTTP request pipeline
+// Configure HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");

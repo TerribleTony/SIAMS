@@ -1,9 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Konscious.Security.Cryptography;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using SIAMS.Data;
 using SIAMS.Models;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace SIAMS.Controllers
@@ -11,15 +10,12 @@ namespace SIAMS.Controllers
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _configuration;
 
-        public AccountController(ApplicationDbContext context, IConfiguration configuration)
+        public AccountController(ApplicationDbContext context)
         {
             _context = context;
-            _configuration = configuration;
         }
 
-        // Registration Action
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -31,19 +27,13 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
-            // Retrieve the secure Pepper from configuration
-            var pepper = _configuration["AppSecrets:Pepper"];
+            // Generate Argon2 Hash
+            var hashedPassword = HashPasswordArgon2(model.Password);
 
-            // Generate Salt
-            var salt = GenerateSalt();
-            var passwordHash = HashPassword(model.Password, salt, pepper);
-
-            // Save the user to the database
             var user = new User
             {
                 Username = model.Username,
-                PasswordHash = passwordHash,
-                Salt = salt,
+                PasswordHash = hashedPassword,
                 Role = "User"
             };
 
@@ -53,7 +43,6 @@ namespace SIAMS.Controllers
             return RedirectToAction("Login", "Account");
         }
 
-        // Login Action
         [HttpPost]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
@@ -66,42 +55,31 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
-            // Retrieve Pepper for validation
-            var pepper = _configuration["AppSecrets:Pepper"];
-            var hashedInput = HashPassword(model.Password, user.Salt, pepper);
+            var inputHash = HashPasswordArgon2(model.Password);
 
-            if (hashedInput != user.PasswordHash)
+            if (inputHash != user.PasswordHash)
             {
                 ModelState.AddModelError("", "Invalid username or password.");
                 return View(model);
             }
 
-            // Sign in logic here (not shown)
+            // Redirect to Home on success
             return RedirectToAction("Index", "Home");
         }
 
-        // Helper Methods
-        private static string GenerateSalt()
+        // Helper Method for Argon2 Hashing
+        private static string HashPasswordArgon2(string password)
         {
-            var saltBytes = new byte[16];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(saltBytes);
-            return Convert.ToBase64String(saltBytes);
-        }
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
 
-        private static string HashPassword(string password, string salt, string pepper)
-        {
-            using var sha256 = SHA256.Create();
-            var saltedPassword = $"{salt}{password}{pepper}";
-            var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(saltedPassword));
+            // Argon2 Parameters (Recommended settings for security)
+            argon2.Salt = Encoding.UTF8.GetBytes("YourSecureSaltValueHere");
+            argon2.DegreeOfParallelism = 8;   // Multithreading
+            argon2.MemorySize = 65536;       // 64 MB
+            argon2.Iterations = 4;           // Number of passes
+
+            var hashBytes = argon2.GetBytes(32); // Output size
             return Convert.ToBase64String(hashBytes);
-        }
-
-        // Login Page (GET) - Displays the login form
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View();  // Return the Login.cshtml view
         }
     }
 }

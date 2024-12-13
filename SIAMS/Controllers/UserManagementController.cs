@@ -62,5 +62,18 @@ namespace SIAMS.Controllers
             TempData["Message"] = "User deleted successfully.";
             return RedirectToAction("Index");
         }
+
+        [HttpPost]
+        public async Task<IActionResult> ApproveAdminRequest(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user != null && user.IsAdminRequested)
+            {
+                user.Role = "Admin";
+                user.IsAdminRequested = false;  // Reset the request
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction("Index");
+        }
     }
 }

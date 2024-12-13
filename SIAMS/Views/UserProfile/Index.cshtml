@@ -1,0 +1,54 @@
+﻿@model SIAMS.Models.UserProfileViewModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<h2>Welcome, @Model.User.Username!</h2>
+
+<div class="mb-4">
+    <h4>Your Profile</h4>
+    <ul>
+        <li><strong>Email:</strong> @Model.User.Email</li>
+        <li><strong>Role:</strong> @Model.User.Role</li>
+    </ul>
+</div>
+
+<div class="mb-4">
+    <h4>Your Registered Assets</h4>
+    @if (Model.User.Assets.Any())
+    {
+        <ul>
+            @foreach (var asset in Model.User.Assets)
+            {
+                <li>@asset.AssetName (@asset.Category)</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>You have no registered assets.</p>
+    }
+</div>
+
+<div class="mb-4">
+    <h4>Recent Activity</h4>
+    @if (Model.RecentLogs.Any())
+    {
+        <ul>
+            @foreach (var log in Model.RecentLogs)
+            {
+                <li><strong>@log.Timestamp.ToLocalTime():</strong> @log.Action</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No recent activity logged.</p>
+    }
+</div>
+
+<a asp-controller="UserProfile" asp-action="Edit" class="btn btn-warning">Edit Profile</a>
+
+<form asp-controller="UserProfile" asp-action="RequestAdmin" method="post" class="mt-2">
+    <button type="submit" class="btn btn-danger">Request Admin Access</button>
+</form>

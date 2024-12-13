@@ -20,6 +20,10 @@ namespace SIAMS.Models
         public string Role { get; set; } = "User";  // Default role
 
         [Required]
-        public string Email { get; set; } = string.Empty;        
+        public string Email { get; set; } = string.Empty;
+
+        public ICollection<Asset> Assets { get; set; } = new List<Asset>();
+
+        public bool IsAdminRequested { get; set; } = false;
     }
 }

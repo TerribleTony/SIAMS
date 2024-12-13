@@ -2,6 +2,42 @@
 
 <h2>Manage Users</h2>
 
+<!-- Admin Requests Section -->
+@if (Model.Any(u => u.IsAdminRequested))
+{
+    <h4>Pending Admin Requests</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model.Where(u => u.IsAdminRequested))
+            {
+                <tr>
+                    <td>@user.Username</td>
+                    <td>@user.Email</td>
+                    <td>
+                        <form asp-action="ApproveAdminRequest" method="post" class="d-inline">
+                            <input type="hidden" name="userId" value="@user.UserId" />
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-muted">No pending admin requests.</p>
+}
+
+<!-- Existing User Management Table -->
+<h4 class="mt-5">All Users</h4>
 <table class="table table-striped">
     <thead>
         <tr>

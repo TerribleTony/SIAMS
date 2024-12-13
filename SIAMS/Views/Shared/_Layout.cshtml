@@ -27,11 +27,22 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Assets" asp-action="Index">Assets</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="UserManagement" asp-action="Index">
-                                <i class="fas fa-users-cog"></i> Manage Users
-                            </a>
-                        </li>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="UserManagement" asp-action="Index">
+                                    <i class="fas fa-users-cog"></i> Manage Users
+                                </a>
+                            </li>
+                        }
+                        @if (User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="UserProfile" asp-action="Index">My Profile</a>
+                            </li>
+                        }
+
+                      
                     </ul>
 
                     <!-- User Information & Logout -->

@@ -2,12 +2,19 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIAMS.Data;
+using SIAMS.Services;  
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Determine the correct connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                      ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Database connection string is not set.");
+}
+
 
 // Parse connection string from Render if needed
 if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
@@ -26,6 +33,15 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, opt =>
         opt.MigrationsAssembly("SIAMS")));
+
+// Load Email Configuration
+var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
+
+// Register email-related services
+builder.Services.AddSingleton(emailConfig);
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+
 
 // Register authentication services
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

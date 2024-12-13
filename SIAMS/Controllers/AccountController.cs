@@ -6,17 +6,27 @@ using Konscious.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 using SIAMS.Models;
+using SIAMS.Services;
+
 
 namespace SIAMS.Controllers
 {
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public AccountController(ApplicationDbContext context)
+
+
+
+        public AccountController(ApplicationDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
+
+
+
 
         [HttpGet]
         public IActionResult AccessDenied()
@@ -33,18 +43,10 @@ namespace SIAMS.Controllers
                    password.Any(ch => "!@#$%^&*()_+|<>?".Contains(ch));
         }
 
-        // Registration Logic
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
-            //if (!ModelState.IsValid)
-            //{
-            //    ViewData["Feedback"] = "Please correct the errors and try again.";
-            //    return View(model);
-            //}
-
             if (!IsValidPassword(model.Password))
             {
                 ViewData["Feedback"] = "Password does not meet security requirements.";
@@ -57,6 +59,15 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
+            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+            {
+                ViewData["Feedback"] = "The email is already registered. Please use a different email.";
+                return View(model);
+            }
+
+            // Generate token for email verification
+            var emailConfirmationToken = Guid.NewGuid().ToString();
+
             var hashedPassword = HashPasswordArgon2(model.Password);
 
             var user = new User
@@ -64,14 +75,47 @@ namespace SIAMS.Controllers
                 Username = model.Username,
                 PasswordHash = hashedPassword,
                 Email = model.Email,
-                Role = "User"
+                Role = "User",
+                IsEmailConfirmed = false,
+                EmailConfirmationToken = emailConfirmationToken
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            ViewData["Feedback"] = "Registration successful! You can now log in.";
+            // Send confirmation email
+            var confirmationLink = Url.Action(
+                "ConfirmEmail", "Account",
+                new { token = emailConfirmationToken, email = user.Email },
+                Request.Scheme);
+
+            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email",
+                $"<p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>");
+
+            ViewData["Feedback"] = "Registration successful! Please check your email to confirm your account.";
             return RedirectToAction("Login", "Account");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ConfirmEmail(string token, string email)
+        {
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(email))
+            {
+                return BadRequest("Invalid email confirmation request.");
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.EmailConfirmationToken == token);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            user.IsEmailConfirmed = true;
+            user.EmailConfirmationToken = null; // Clear token
+            await _context.SaveChangesAsync();
+
+            TempData["Message"] = "Email confirmed successfully!";
+            return RedirectToAction("Login");
         }
 
         [HttpGet]
@@ -101,6 +145,12 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
+            if (!user.IsEmailConfirmed)
+            {
+                ModelState.AddModelError("", "Please confirm your email before logging in.");
+                return View(model);
+            }
+
             // Create Authentication Cookie
             var claims = new List<System.Security.Claims.Claim>
             {
@@ -112,6 +162,7 @@ namespace SIAMS.Controllers
             var principal = new System.Security.Claims.ClaimsPrincipal(identity);
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
 
             return RedirectToAction("Index", "Home");
         }

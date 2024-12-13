@@ -25,5 +25,8 @@ namespace SIAMS.Models
         public ICollection<Asset> Assets { get; set; } = new List<Asset>();
 
         public bool IsAdminRequested { get; set; } = false;
+
+        public bool IsEmailConfirmed { get; set; } = false;
+        public string? EmailConfirmationToken { get; set; }
     }
 }

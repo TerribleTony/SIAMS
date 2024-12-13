@@ -35,7 +35,8 @@ namespace SIAMS.Data
                     PasswordHash = HashPassword("Admin1SecurePassword"),
                     Salt = "RandomSaltValue1",
                     Role = "Admin",
-                    Email = "admin1@example.com"
+                    Email = "admin1@example.com",
+                    IsEmailConfirmed = true
                 },
                 new User
                 {
@@ -43,7 +44,8 @@ namespace SIAMS.Data
                     PasswordHash = HashPassword("Admin2SecurePassword"),
                     Salt = "RandomSaltValue2",
                     Role = "Admin",
-                    Email = "admin2@example.com"
+                    Email = "admin2@example.com",
+                    IsEmailConfirmed = true
                 }
             );
 

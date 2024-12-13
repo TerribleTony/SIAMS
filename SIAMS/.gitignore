@@ -1,0 +1,54 @@
+﻿# Ignore Visual Studio files
+.vscode/
+*.code-workspace
+
+# User-specific files
+*.rsuser
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build directories
+bin/
+obj/
+out/
+
+# Debug and Release configurations
+*.log
+*.tlog
+*.dmp
+*.pdb
+
+# Config files
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.json
+
+# DotNet and package dependencies
+*.vs/
+*.env
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+packages/
+*.DS_Store
+Thumbs.db
+
+# OS files
+*.swp
+*~ 
+*.tmp
+*.bak
+*.old
+*.orig
+
+# Environment variables
+.env
+
+# IDE-related files
+.idea/
+_ReSharper/

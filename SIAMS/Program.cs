@@ -6,9 +6,20 @@ using SIAMS.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Determine the correct connection string
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                     ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+// Load Sensitive Settings from Secrets in Development
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
+//// Determine the correct connection string
+//var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+//                     ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+// Database Context
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 if (string.IsNullOrEmpty(connectionString))
 {
@@ -34,10 +45,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, opt =>
         opt.MigrationsAssembly("SIAMS")));
 
-// Load Email Configuration
-var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
+//// Load Email Configuration
+//var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
 
-// Register email-related services
+//// Register email-related services
+//builder.Services.AddSingleton(emailConfig);
+//builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Email Service Configuration
+var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
 builder.Services.AddSingleton(emailConfig);
 builder.Services.AddScoped<IEmailService, EmailService>();
 

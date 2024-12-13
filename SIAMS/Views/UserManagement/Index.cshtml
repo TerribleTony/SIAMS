@@ -6,6 +6,23 @@
 @if (Model.Any(u => u.IsAdminRequested))
 {
     <h4>Pending Admin Requests</h4>
+
+    <!-- Success Notification -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    <!-- Error Notification -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
     <table class="table table-striped">
         <thead>
             <tr>

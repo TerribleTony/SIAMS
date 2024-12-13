@@ -5,7 +5,12 @@
 }
 
 <h2>Login</h2>
-
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["Message"]
+    </div>
+}
 <form asp-action="Login" method="post">
     <div class="form-group">
         <label asp-for="Username" class="control-label"></label>

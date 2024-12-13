@@ -51,15 +51,21 @@ namespace SIAMS.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
+
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction("Index");
+            }
 
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
 
-            TempData["Message"] = "User deleted successfully.";
+            TempData["Success"] = "User deleted successfully.";
             return RedirectToAction("Index");
         }
 

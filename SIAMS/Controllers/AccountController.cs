@@ -92,7 +92,9 @@ namespace SIAMS.Controllers
             await _emailService.SendEmailAsync(user.Email, "Confirm Your Email",
                 $"<p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>");
 
-            ViewData["Feedback"] = "Registration successful! Please check your email to confirm your account.";
+            // Provide user feedback
+            TempData["Message"] = "Registration successful! Please check your email to confirm your account.";
+
             return RedirectToAction("Login", "Account");
         }
 

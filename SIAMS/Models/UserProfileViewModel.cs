@@ -4,12 +4,12 @@ namespace SIAMS.Models
 {
     public class UserProfileViewModel
     {
-        public User User { get; set; }
-        public List<Log> RecentLogs { get; set; }
+        public User User { get; set; } = null!;
+        public List<Log>? RecentLogs { get; set; }
     }
 
     public class EditUserViewModel
     {
-        public string Email { get; set; }
+        public string Email { get; set; } = null!;  
     }
 }

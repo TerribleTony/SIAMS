@@ -32,10 +32,10 @@
 
 <div class="mb-4">
     <h4>Recent Activity</h4>
-    @if (Model.RecentLogs.Any())
+    @if (Model.RecentLogs?.Any() == true)
     {
         <ul>
-            @foreach (var log in Model.RecentLogs)
+            @foreach (var log in Model.RecentLogs!)
             {
                 <li><strong>@log.Timestamp.ToLocalTime():</strong> @log.Action</li>
             }

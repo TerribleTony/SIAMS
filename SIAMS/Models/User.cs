@@ -9,10 +9,10 @@ namespace SIAMS.Models
 
         [Required]
         [MaxLength(50)]
-        public string Username { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty!;
 
         [Required]
-        public string PasswordHash { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty!;
 
         [Required]
         public string Salt { get; set; } = string.Empty;

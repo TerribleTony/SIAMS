@@ -32,7 +32,7 @@ namespace SIAMS.Data
                 new User
                 {
                     Username = "admin1",
-                    PasswordHash = HashPassword("Admin1SecurePassword"),
+                    PasswordHash = HashPassword("Admin1SecurePassword", "kljasedefkjnbsdkhsef"),
                     Salt = "RandomSaltValue1",
                     Role = "Admin",
                     Email = "admin1@example.com",
@@ -41,7 +41,7 @@ namespace SIAMS.Data
                 new User
                 {
                     Username = "admin2",
-                    PasswordHash = HashPassword("Admin2SecurePassword"),
+                    PasswordHash = HashPassword("Admin2SecurePassword", "kljasedefkjnbsdkhsef"),
                     Salt = "RandomSaltValue2",
                     Role = "Admin",
                     Email = "admin2@example.com",
@@ -53,10 +53,10 @@ namespace SIAMS.Data
         }
 
         // Password Hashing Method
-        private static string HashPassword(string password)
+        private static string HashPassword(string password, string salt)
         {
             using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
-            argon2.Salt = Encoding.UTF8.GetBytes("YourSecureSaltValueHere");
+            argon2.Salt = Encoding.UTF8.GetBytes(salt);
             argon2.DegreeOfParallelism = 8;   // Number of threads
             argon2.MemorySize = 65536;        // Memory in KB (64MB)
             argon2.Iterations = 4;            // Number of passes

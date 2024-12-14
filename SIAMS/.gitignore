@@ -26,6 +26,8 @@ appsettings.Development.json
 appsettings.Local.json
 appsettings.*.json
 
+
+
 # DotNet and package dependencies
 *.vs/
 *.env

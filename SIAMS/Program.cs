@@ -54,6 +54,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Email Service Configuration
 var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
+if (emailConfig == null)
+{
+    throw new InvalidOperationException("Email configuration is missing in appsettings.json.");
+}
 builder.Services.AddSingleton(emailConfig);
 builder.Services.AddScoped<IEmailService, EmailService>();
 
@@ -92,6 +96,9 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"Database migration or seeding failed: {ex.Message}");
     }
 }
+
+var hashSalt = builder.Configuration["AppSecrets:HashSalt"]
+               ?? Environment.GetEnvironmentVariable("HASH_SALT");
 
 // Configure HTTP request pipeline
 if (!app.Environment.IsDevelopment())

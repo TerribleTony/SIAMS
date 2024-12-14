@@ -25,8 +25,8 @@
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.AssignedUser)
         </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.AssignedUser.UserId)
+        <dd class="col-sm-10">
+            @(Model.AssignedUser != null ? Model.AssignedUser.UserId.ToString() : "Not Assigned")
         </dd>
     </dl>
 </div>

@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 using SIAMS.Models;
 using SIAMS.Services;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Moq;
 
 
 namespace SIAMS.Controllers
@@ -49,24 +51,23 @@ namespace SIAMS.Controllers
         {
             if (!IsValidPassword(model.Password))
             {
-                ViewData["Feedback"] = "Password does not meet security requirements.";
+                ModelState.AddModelError("", "Password does not meet security requirements.");
                 return View(model);
             }
 
-            if (await _context.Users.AnyAsync(u => u.Username == model.Username))
+            if (await _context.Users.AnyAsync(u => u.Username.ToLower() == model.Username.ToLower()))
             {
-                ViewData["Feedback"] = "The username is already taken. Please choose a different one.";
+                ModelState.AddModelError("", "The username is already taken.");
                 return View(model);
             }
 
-            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+            if (await _context.Users.AnyAsync(u => u.Email.ToLower() == model.Email.ToLower()))
             {
-                ViewData["Feedback"] = "The email is already registered. Please use a different email.";
+                ModelState.AddModelError("", "The email is already registered.");
                 return View(model);
             }
 
-            // Generate token for email verification
-            var emailConfirmationToken = Guid.NewGuid().ToString();
+            var emailConfirmationToken = Guid.NewGuid().ToString() ?? string.Empty;
 
             var hashedPassword = HashPasswordArgon2(model.Password);
 
@@ -83,20 +84,22 @@ namespace SIAMS.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Send confirmation email
-            var confirmationLink = Url.Action(
-                "ConfirmEmail", "Account",
-                new { token = emailConfirmationToken, email = user.Email },
-                Request.Scheme);
+            // Send confirmation email only if token is valid
+            if (!string.IsNullOrEmpty(emailConfirmationToken))
+            {
+                var confirmationLink = Url.Action(
+                    "ConfirmEmail", "Account",
+                    new { token = emailConfirmationToken, email = user.Email },
+                    Request.Scheme);
 
-            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email",
-                $"<p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>");
+                await _emailService.SendEmailAsync(user.Email, "Confirm Your Email",
+                    $"<p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>");
+            }
 
-            // Provide user feedback
             TempData["Message"] = "Registration successful! Please check your email to confirm your account.";
-
             return RedirectToAction("Login", "Account");
         }
+
 
         [HttpGet]
         public async Task<IActionResult> ConfirmEmail(string token, string email)
@@ -115,6 +118,8 @@ namespace SIAMS.Controllers
             user.IsEmailConfirmed = true;
             user.EmailConfirmationToken = null; // Clear token
             await _context.SaveChangesAsync();
+
+          
 
             TempData["Message"] = "Email confirmed successfully!";
             return RedirectToAction("Login");

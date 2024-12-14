@@ -21,7 +21,13 @@ namespace SIAMS.Controllers
         // GET: /UserProfile
         public async Task<IActionResult> Index()
         {
-            var username = User.Identity.Name;
+            if (HttpContext?.User == null || HttpContext.User.Identity?.IsAuthenticated == false)
+                return Unauthorized("User is not logged in.");
+
+            var username = HttpContext.User.Identity?.Name;
+
+            if (string.IsNullOrEmpty(username))
+                return Unauthorized("User is not logged in.");
 
             // Get user info
             var user = await _context.Users
@@ -51,7 +57,12 @@ namespace SIAMS.Controllers
         // GET: /UserProfile/Edit
         public async Task<IActionResult> Edit()
         {
-            var username = User.Identity.Name;
+            if (HttpContext?.User == null || HttpContext.User.Identity?.IsAuthenticated == false)
+                return Unauthorized("User is not logged in.");
+
+            var username = User?.Identity?.Name;
+            if (string.IsNullOrEmpty(username))
+                return Unauthorized("User is not logged in.");
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
             if (user == null)
@@ -73,11 +84,18 @@ namespace SIAMS.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            var username = User.Identity.Name;
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+            var username = User?.Identity?.Name;
+            if (string.IsNullOrEmpty(username))
+                return Unauthorized("User is not logged in.");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username!);
             if (user == null)
-                return NotFound("User not found.");
+            {
+               return NotFound("User not found.");
+            }
+
 
             // Update details
             user.Email = model.Email;

@@ -23,14 +23,11 @@ jobs:
     - name: Build the application
       run: dotnet build --no-restore --configuration Release
 
-    - name: Run tests
+    - name: Run Tests
       run: dotnet test SIAMS.Tests/SIAMS.Tests.csproj --configuration Release --verbosity normal
-
-    - name: Install Security Audit Tool
-      run: dotnet tool install --global dotnet-security-audit
-
-    - name: Run Security Audit
-      run: dotnet security-audit
 
     - name: Check for Vulnerable Packages
       run: dotnet list package --vulnerable
+
+
+

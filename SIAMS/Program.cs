@@ -45,7 +45,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, opt =>
         opt.MigrationsAssembly("SIAMS")));
 
-//// Load Email Configurations
+//// Load Email Configuration
 //var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
 
 //// Register email-related services

@@ -25,3 +25,12 @@ jobs:
 
     - name: Run tests
       run: dotnet test SIAMS.Tests/SIAMS.Tests.csproj --configuration Release --verbosity normal
+
+    - name: Install Security Audit Tool
+      run: dotnet tool install --global dotnet-security-audit
+
+    - name: Run Security Audit
+      run: dotnet security-audit
+
+    - name: Check for Vulnerable Packages
+      run: dotnet list package --vulnerable

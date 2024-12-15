@@ -185,25 +185,7 @@ namespace SIAMS.Tests.Controllers
                 Times.Once);
         }
 
-        [Fact]
-        public async Task ConfirmEmail_ShouldConfirmUser_WhenTokenIsValid()
-        {
-            SeedTestData();
-            var tempDataMock = new Mock<ITempDataDictionary>();
-            _controller.TempData = tempDataMock.Object;
-            // Act
-            var result = await _controller.ConfirmEmail("valid-token", "existinguser@example.com") as RedirectToActionResult;
-
-            // Assert: Redirection Check
-            Assert.NotNull(result);
-            Assert.Equal("Login", result.ActionName);
-
-            // Assert: Email Confirmation Check
-            var updatedUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == "existinguser@example.com");
-            Assert.True(updatedUser.IsEmailConfirmed);
-            Assert.Null(updatedUser.EmailConfirmationToken);
-        }
-
+     
         [Fact]
         public async Task Login_ShouldRedirectToHome_WhenCredentialsAreValid()
         {
@@ -283,6 +265,95 @@ namespace SIAMS.Tests.Controllers
             Assert.Contains("Invalid username or password.", _controller.ModelState[""].Errors[0].ErrorMessage);
         }
 
+        [Fact]
+        public async Task ConfirmEmail_ShouldConfirmUser_WhenTokenIsValid()
+        {
+            SeedTestData();
+            var tempDataMock = new Mock<ITempDataDictionary>();
+            _controller.TempData = tempDataMock.Object;
+            // Act
+            var result = await _controller.ConfirmEmail("valid-token", "existinguser@example.com") as RedirectToActionResult;
+
+            // Assert: Redirection Check
+            Assert.NotNull(result);
+            Assert.Equal("Login", result.ActionName);
+
+            // Assert: Email Confirmation Check
+            var updatedUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == "existinguser@example.com");
+            Assert.True(updatedUser.IsEmailConfirmed);
+            Assert.Null(updatedUser.EmailConfirmationToken);
+        }
+
+
+        [Fact]
+        public async Task ConfirmEmail_ShouldReturnBadRequest_WhenTokenIsInvalid()
+        {
+
+            SeedTestData();
+            // Arrange: Set up TempData to avoid null reference issues
+            var tempDataMock = new Mock<ITempDataDictionary>();
+            _controller.TempData = tempDataMock.Object;
+
+            // Act: Call ConfirmEmail with an invalid token
+            var result = await _controller.ConfirmEmail("invalid-token", "nonexistentuser@example.com");
+
+            // Assert: Check that a BadRequestResult is returned
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("User not found.", notFoundResult.Value);
+        }
+
+        [Fact]
+        public async Task Logout_ShouldSignOutUser_AndRedirectToLogin()
+        {
+            // Arrange: Mock services
+            var mockAuthService = new Mock<IAuthenticationService>();
+            mockAuthService.Setup(x => x.SignOutAsync(
+                It.IsAny<HttpContext>(),
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                null))
+                .Returns(Task.CompletedTask)
+                .Verifiable();
+
+            var mockUrlHelper = new Mock<IUrlHelper>();
+            mockUrlHelper.Setup(x => x.Action(It.IsAny<UrlActionContext>()))
+                .Returns("http://mock-redirect-url");
+
+            var mockUrlHelperFactory = new Mock<IUrlHelperFactory>();
+            mockUrlHelperFactory.Setup(x => x.GetUrlHelper(It.IsAny<ActionContext>()))
+                .Returns(mockUrlHelper.Object);
+
+            var serviceProviderMock = new Mock<IServiceProvider>();
+            serviceProviderMock.Setup(x => x.GetService(typeof(IAuthenticationService)))
+                .Returns(mockAuthService.Object);
+            serviceProviderMock.Setup(x => x.GetService(typeof(IUrlHelperFactory)))
+                .Returns(mockUrlHelperFactory.Object);
+
+            var httpContext = new DefaultHttpContext
+            {
+                RequestServices = serviceProviderMock.Object
+            };
+
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+
+            // Act: Call the Logout action
+            var result = await _controller.Logout();
+
+            // Assert: Verify SignOutAsync was called
+            mockAuthService.Verify(
+                x => x.SignOutAsync(
+                    It.IsAny<HttpContext>(),
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    null),
+                Times.Once);
+
+            // Assert: Check redirection result
+            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Login", redirectResult.ActionName);
+            Assert.Equal("Account", redirectResult.ControllerName);
+        }
 
 
 

@@ -43,7 +43,7 @@ jobs:
       uses: github/codeql-action/analyze@v2
 
     - name: Run OWASP Dependency Check
-      uses: dependency-check/DependencyCheck@v3
+      uses: jeremylong/gha-dependency-check@v4.1.0
       with:
         project: 'SIAMS'
         scan: '.'

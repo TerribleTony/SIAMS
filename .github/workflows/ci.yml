@@ -29,5 +29,13 @@ jobs:
     - name: Check for Vulnerable Packages
       run: dotnet list package --vulnerable
 
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/init@v2
+      with:
+       languages: 'csharp'
+    - name: Run CodeQL Scan
+      uses: github/codeql-action/analyze@v2
+
+
 
 

@@ -18,8 +18,9 @@ namespace SIAMS.Tests.Controllers
         public AssetsControllerTests()
         {
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase("TestDatabase")
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())  // Unique DB for each test
                 .Options;
+
 
             _context = new ApplicationDbContext(options);
             _controller = new AssetsController(_context);

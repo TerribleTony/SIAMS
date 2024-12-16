@@ -26,7 +26,7 @@ jobs:
       run: dotnet restore ./SIAMS.sln
 
     - name: Build the application
-      run: dotnet build SIAMS/SIAMS.sln --no-restore --configuration Release
+      run: dotnet build ./SIAMS.sln --no-restore --configuration Release
 
     - name: Run Tests
       run: dotnet test SIAMS.Tests/SIAMS.Tests.csproj --configuration Release --verbosity normal

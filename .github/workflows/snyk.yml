@@ -1,0 +1,34 @@
+name: Snyk Security Scan
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Monday at midnight UTC
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '8.0.x'  # Ensure it matches your project
+
+    - name: Install Snyk CLI
+      uses: snyk/actions/setup@v2
+      with:
+        version: 'latest'
+
+    - name: Authenticate Snyk API
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: snyk auth $SNYK_TOKEN
+
+    - name: Run Snyk Security Audit
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: snyk test --severity-threshold=high --all-projects

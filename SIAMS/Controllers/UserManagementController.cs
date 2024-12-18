@@ -81,5 +81,11 @@ namespace SIAMS.Controllers
             }
             return RedirectToAction("Index");
         }
+
+        public bool HasRequestedAdmin(int userId)
+        {
+            return _context.Logs.Any(l => l.Action == "RequestAdmin" && l.UserId == userId);
+        }
+
     }
 }

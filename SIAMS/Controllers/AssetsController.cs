@@ -55,7 +55,6 @@ namespace SIAMS.Controllers
             return View();
         }
 
-        // POST: Assets/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("AssetId,AssetName,Category,AssignedUserId")] Asset asset)
@@ -63,12 +62,23 @@ namespace SIAMS.Controllers
             if (ModelState.IsValid)
             {
                 _context.Add(asset);
+
+                // Log the action
+                _context.Logs.Add(new Log
+                {
+                    Action = $"Asset '{asset.AssetName}' created.",
+                    Timestamp = DateTime.UtcNow,
+                    PerformedBy = User?.Identity?.Name ?? "System"
+                });
+
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+
             ViewData["AssignedUserId"] = new SelectList(_context.Users, "UserId", "Username", asset.AssignedUserId);
             return View(asset);
         }
+
 
         // GET: Assets/Edit/5
         public async Task<IActionResult> Edit(int? id)
@@ -102,6 +112,15 @@ namespace SIAMS.Controllers
                 try
                 {
                     _context.Update(asset);
+
+                    // Log the action
+                    _context.Logs.Add(new Log
+                    {
+                        Action = $"Asset '{asset.AssetName}' updated.",
+                        Timestamp = DateTime.UtcNow,
+                        PerformedBy = User?.Identity?.Name ?? "System"
+                    });
+
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -117,9 +136,11 @@ namespace SIAMS.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
+
             ViewData["AssignedUserId"] = new SelectList(_context.Users, "UserId", "Username", asset.AssignedUserId);
             return View(asset);
         }
+
 
         // GET: Assets/Delete/5
         public async Task<IActionResult> Delete(int? id)
@@ -149,9 +170,17 @@ namespace SIAMS.Controllers
             if (asset != null)
             {
                 _context.Assets.Remove(asset);
+
+                // Log the action
+                _context.Logs.Add(new Log
+                {
+                    Action = $"Asset '{asset.AssetName}' deleted.",
+                    Timestamp = DateTime.UtcNow,
+                    PerformedBy = User?.Identity?.Name ?? "System"
+                });
+
                 await _context.SaveChangesAsync();
             }
-
             return RedirectToAction(nameof(Index));
         }
 

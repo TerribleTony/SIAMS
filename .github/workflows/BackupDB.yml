@@ -11,11 +11,20 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
-    - name: Install PostgreSQL Client
+    - name: Set Up PostgreSQL Repository
       run: |
+        echo "Adding PostgreSQL APT repository..."
         sudo apt-get update
+        sudo apt-get install -y wget gnupg
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+        sudo apt-get update
+
+    - name: Install PostgreSQL Client 16
+      run: |
+        echo "Installing PostgreSQL 16 client..."
         sudo apt-get install -y postgresql-client-16
 
     - name: Run pg_dump

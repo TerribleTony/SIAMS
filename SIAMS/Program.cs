@@ -1,42 +1,35 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using SIAMS.Data;
 using SIAMS.Services;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load Sensitive Settings from Secrets in Development
+// Load sensitive secrets during development
 if (builder.Environment.IsDevelopment())
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-//// Determine the correct connection string
-//var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-//                     ?? Environment.GetEnvironmentVariable("DATABASE_URL");
-
-// Database Context
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+// Resolve the database connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                      ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("Database connection string is not set.");
 }
 
-// Add data protection services and persistent key storage
+// Configure Data Protection
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys")) 
-    .SetApplicationName("SIAMS")  
-    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); 
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))
+    .SetApplicationName("SIAMS")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
 
-
-// Parse connection string from Render if needed
-if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+// Configure Database Context
+if (connectionString.StartsWith("postgres://"))
 {
     var uri = new Uri(connectionString);
     var dbUser = uri.UserInfo.Split(':')[0];
@@ -48,30 +41,19 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
     connectionString = $"Host={host};Port={port};Database={dbName};Username={dbUser};Password={dbPass};SSL Mode=Require;Trust Server Certificate=true;";
 }
 
-// Register database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString, opt =>
-        opt.MigrationsAssembly("SIAMS")));
+    options.UseNpgsql(connectionString, opt => opt.MigrationsAssembly("SIAMS")));
 
-//// Load Email Configuration
-//var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
-
-//// Register email-related services
-//builder.Services.AddSingleton(emailConfig);
-//builder.Services.AddScoped<IEmailService, EmailService>();
-
-// Email Service Configuration
+// Configure Email Services
 var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
 if (emailConfig == null)
 {
-    throw new InvalidOperationException("Email configuration is missing in appsettings.json.");
+    throw new InvalidOperationException("Email configuration is missing.");
 }
 builder.Services.AddSingleton(emailConfig);
 builder.Services.AddScoped<IEmailService, EmailService>();
 
-
-
-// Register authentication services
+// Configure Authentication & Authorization
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -85,72 +67,49 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 });
 
-
-// Add MVC services
+// Add MVC Services
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
-});
-
-// Enable logging
+// Configure Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Build the app
+// Build the App
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();  // Detailed errors in Development
+    app.UseDeveloperExceptionPage();  // Detailed Errors in Development
 }
 else
 {
-    app.UseExceptionHandler("/Home/Error");  // Custom error page in Production
-    app.UseHsts();
+    app.UseExceptionHandler("/Home/Error");  // Custom Error Page
+    app.UseHsts();  // Enforce HTTPS
 }
 
-
-// Apply migrations and seed data
+// Apply Database Migrations & Seed Data
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        DbInitializer.Seed(context, builder.Configuration);  // Pass secrets
+        DbInitializer.Seed(context, builder.Configuration);  // Initialize Database
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration or seeding failed: {ex.Message}");
+        Console.WriteLine($"Database seeding failed: {ex.Message}");
     }
 }
 
-var hashSalt = builder.Configuration["AppSecrets:HashSalt"]
-               ?? Environment.GetEnvironmentVariable("HASH_SALT");
-
-// Configure HTTP request pipeline
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
-
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5000); // HTTP
-    options.ListenAnyIP(8080); // HTTPS (as required by Render)
-});
-
-
+// Configure Middleware
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Define Default Route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

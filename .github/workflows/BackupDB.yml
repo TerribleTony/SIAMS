@@ -1,6 +1,7 @@
 name: PostgreSQL Backup
 
 on:
+  workflow_dispatch:  # Allow manual trigger
   schedule:
     - cron: "0 2 * * 0"  # Every Sunday at 2 AM UTC
 

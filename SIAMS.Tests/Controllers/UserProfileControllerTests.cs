@@ -218,8 +218,7 @@ namespace SIAMS.Tests.Controllers
 
             // Verify TempData for admin user
             tempDataMock.VerifySet(t => t["Message"] = "You are already an admin.", Times.Once);
-        }
-
+        }    
 
     }
 }

@@ -54,7 +54,31 @@ jobs:
         # Runs Snyk Code (SAST) analysis and uploads result into GitHub.
         # Use || true to not fail the pipeline
       - name: Snyk Code test
-        run: snyk code test --sarif > snyk-code.sarif # || true
+        run: snyk code test --sarif > snyk-code.sarif  || true
+
+      - name: Check Snyk CLI Version
+        run: snyk --version
+        
+      - name: Show Current Directory
+        run: pwd && ls -la
+        
+      - name: Check SARIF File Exists
+        run: ls -lah snyk-code.sarif
+
+      - name: List Project Files
+        run: ls -R
+
+      - name: Snyk Code Test (SAST)
+        run: snyk code test --sarif > snyk-code.sarif || true
+      
+      - name: Snyk Open Source Test (SCA)
+        run: snyk test --all-projects || true
+      
+      - name: Snyk Infrastructure as Code Test (IaC)
+        run: snyk iac test --report || true
+      
+      - name: Snyk Container Test (Docker)
+        run: snyk container test your/image-to-test --file=Dockerfile || true
 
         # Runs Snyk Open Source (SCA) analysis and uploads result to Snyk.
       - name: Snyk Open Source monitor

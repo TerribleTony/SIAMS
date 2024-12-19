@@ -32,7 +32,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var user in Model.Where(u => u.IsAdminRequested))
+            @foreach (var user in Model.Where(u => u.IsAdminRequested && !u.IsDeleted))
             {
                 <tr>
                     <td>@user.Username</td>
@@ -70,7 +70,7 @@ else
         </tr>
     </thead>
     <tbody>
-        @foreach (var user in Model)
+        @foreach (var user in Model.Where(u => !u.IsDeleted))
         {
             <tr>
                 <td>@user.Username</td>

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
+
 namespace SIAMS.Models
 {
     public class User
@@ -29,5 +30,8 @@ namespace SIAMS.Models
         public bool IsEmailConfirmed { get; set; } = false;
         public string? EmailConfirmationToken { get; set; }
 
+        public bool IsDeleted { get; set; }
+        public ICollection<Log> ?Logs { get; set; }
+       
     }
 }

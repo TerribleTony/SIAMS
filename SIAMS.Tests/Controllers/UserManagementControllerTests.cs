@@ -109,7 +109,8 @@ namespace SIAMS.Tests.Controllers
             Assert.Equal("Index", redirectResult.ActionName);
 
             var user = await context.Users.FindAsync(2);
-            Assert.Null(user);
+            Assert.NotNull(user);
+            Assert.True(user.IsDeleted);
         }
      
     }

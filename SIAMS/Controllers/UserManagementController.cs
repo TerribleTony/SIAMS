@@ -92,6 +92,7 @@ namespace SIAMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            // Find the user
             var user = await _context.Users.FindAsync(id);
 
             if (user == null)
@@ -100,7 +101,8 @@ namespace SIAMS.Controllers
                 return RedirectToAction("Index");
             }
 
-            _context.Users.Remove(user);
+            // Mark the user as deleted
+            user.IsDeleted = true;
 
             // Log the delete action
             var currentAdmin = await GetCurrentUser();
@@ -108,8 +110,8 @@ namespace SIAMS.Controllers
             {
                 _context.Logs.Add(new Log
                 {
-                    UserId = user.UserId,
-                    Action = $"User '{user.Username}' deleted by '{currentAdmin.Username}'.",
+                    UserId = currentAdmin.UserId,
+                    Action = $"User '{user.Username}' marked as deleted by '{currentAdmin.Username}'.",
                     Timestamp = DateTime.UtcNow,
                     PerformedBy = currentAdmin.Username
                 });
@@ -120,6 +122,7 @@ namespace SIAMS.Controllers
             TempData["Success"] = "User deleted successfully.";
             return RedirectToAction("Index");
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -150,7 +153,7 @@ namespace SIAMS.Controllers
             // Log the approval action
             _context.Logs.Add(new Log
             {
-                UserId = user.UserId,  // User being approved
+                UserId = currentAdmin.UserId, 
                 Action = $"User '{user.Username}' was approved for admin access by '{currentAdmin.Username}'.",
                 Timestamp = DateTime.UtcNow,
                 PerformedBy = currentAdmin.Username

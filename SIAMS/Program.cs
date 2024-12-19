@@ -29,9 +29,9 @@ if (string.IsNullOrEmpty(connectionString))
 
 // Add data protection services and persistent key storage
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys")) // Use a persistent folder
-    .SetApplicationName("SIAMS")  // Set a unique app name
-    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); // Optional, change key lifetime
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys")) 
+    .SetApplicationName("SIAMS")  
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); 
 
 
 // Parse connection string from Render if needed

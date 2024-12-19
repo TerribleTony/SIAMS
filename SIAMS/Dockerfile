@@ -19,3 +19,9 @@ COPY --from=build /app/SIAMS/out .
 
 # Set the entry point
 ENTRYPOINT ["dotnet", "SIAMS.dll"]
+
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
+WORKDIR /app
+COPY . .
+RUN mkdir /app/keys
+ENTRYPOINT ["dotnet", "SIAMS.dll"]

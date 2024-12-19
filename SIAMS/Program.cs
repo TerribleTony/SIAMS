@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIAMS.Data;
-using SIAMS.Services;  
+using SIAMS.Services;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,12 @@ if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("Database connection string is not set.");
 }
+
+// Add data protection services and persistent key storage
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys")) // Use a persistent folder
+    .SetApplicationName("SIAMS")  // Set a unique app name
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); // Optional, change key lifetime
 
 
 // Parse connection string from Render if needed

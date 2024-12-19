@@ -32,7 +32,7 @@ jobs:
           --file=backup_$(date +%Y%m%d).dump
 
     - name: Upload PostgreSQL Backup as Artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: postgres-backup
         path: backup_*.dump

@@ -15,7 +15,7 @@ obj/
 out/
 
 # Debug and Release configurations
-*.log
+
 *.tlog
 *.dmp
 *.pdb

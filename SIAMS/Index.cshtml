@@ -1,0 +1,23 @@
+﻿@model IEnumerable<SIAMS.Models.Log>
+
+<h2>System Logs</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date & Time</th>
+            <th>Action</th>
+            <th>Performed By</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var log in Model)
+        {
+            <tr>
+                <td>@log.Timestamp.ToLocalTime()</td>
+                <td>@log.Action</td>
+                <td>@log.User?.Username</td>
+            </tr>
+        }
+    </tbody>
+</table>

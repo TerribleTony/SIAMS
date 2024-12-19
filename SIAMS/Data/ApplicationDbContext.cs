@@ -87,6 +87,5 @@ namespace SIAMS.Data
             }
             return value ?? defaultValue;
         }
-
     }
 }

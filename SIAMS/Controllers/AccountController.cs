@@ -81,13 +81,14 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
-            var emailConfirmationToken = Guid.NewGuid().ToString() ?? string.Empty;
-            var hashedPassword = HashPasswordArgon2(model.Password);
+            var emailConfirmationToken = Guid.NewGuid().ToString();
+            var (passwordHash, salt) = HashPasswordArgon2(model.Password);
 
             var user = new User
             {
                 Username = model.Username,
-                PasswordHash = hashedPassword,
+                PasswordHash = passwordHash,
+                Salt = salt,
                 Email = model.Email,
                 Role = "User",
                 IsEmailConfirmed = false,
@@ -114,7 +115,8 @@ namespace SIAMS.Controllers
             return RedirectToAction("Login", "Account");
         }
 
-       
+
+
 
         [HttpGet]
         public async Task<IActionResult> ConfirmEmail(string token, string email)
@@ -157,6 +159,7 @@ namespace SIAMS.Controllers
         }
 
         // Handle Login Form Submission (POST)
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -164,7 +167,22 @@ namespace SIAMS.Controllers
             if (!ModelState.IsValid) return View(model);
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
-            if (user == null || HashPasswordArgon2(model.Password) != user.PasswordHash)
+            if (user == null)
+            {
+                ModelState.AddModelError("", "Invalid username or password.");
+                return View(model);
+            }
+
+            // Verify Password
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(model.Password));
+            argon2.Salt = Convert.FromBase64String(user.Salt);
+            argon2.DegreeOfParallelism = 8;
+            argon2.MemorySize = 65536;
+            argon2.Iterations = 4;
+
+            string computedHash = Convert.ToBase64String(argon2.GetBytes(32));
+
+            if (computedHash != user.PasswordHash)
             {
                 ModelState.AddModelError("", "Invalid username or password.");
                 return View(model);
@@ -178,19 +196,19 @@ namespace SIAMS.Controllers
 
             // Create Authentication Cookie
             var claims = new List<System.Security.Claims.Claim>
-            {
-                new(System.Security.Claims.ClaimTypes.Name, user.Username),
-                new(System.Security.Claims.ClaimTypes.Role, user.Role)
-            };
+    {
+        new(System.Security.Claims.ClaimTypes.Name, user.Username),
+        new(System.Security.Claims.ClaimTypes.Role, user.Role)
+    };
 
             var identity = new System.Security.Claims.ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new System.Security.Claims.ClaimsPrincipal(identity);
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-
             return RedirectToAction("Index", "Home");
         }
+
 
         // Logout Logic
         [HttpPost]
@@ -202,16 +220,21 @@ namespace SIAMS.Controllers
         }
 
         // Password Hashing Helper Method
-        private static string HashPasswordArgon2(string password)
+        private static (string Hash, string Salt) HashPasswordArgon2(string password)
         {
-            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
-            argon2.Salt = Encoding.UTF8.GetBytes("YourSecureSaltValueHere");
-            argon2.DegreeOfParallelism = 8;   // Number of threads
-            argon2.MemorySize = 65536;        // Memory in KB (64MB)
-            argon2.Iterations = 4;            // Number of passes
+            using var rng = new System.Security.Cryptography.RNGCryptoServiceProvider();
+            byte[] saltBytes = new byte[16];
+            rng.GetBytes(saltBytes);
+            string salt = Convert.ToBase64String(saltBytes);
 
-            var hashBytes = argon2.GetBytes(32);  // 32-byte hash
-            return Convert.ToBase64String(hashBytes);
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
+            argon2.Salt = saltBytes;
+            argon2.DegreeOfParallelism = 8;
+            argon2.MemorySize = 65536;
+            argon2.Iterations = 4;
+
+            var hashBytes = argon2.GetBytes(32);
+            return (Convert.ToBase64String(hashBytes), salt);
         }
     }
 }

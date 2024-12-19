@@ -5,10 +5,11 @@
         public int LogId { get; set; }
         public string Action { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
-
         public string PerformedBy { get; set; } = string.Empty;
-        public int UserId { get; set; }
+        // Foreign Key Relationship
+        public int? UserId { get; set; }           // Allow Nullable to Avoid Issues
+        public User? User { get; set; }            // Navigation Property
 
-        public User? User { get; set; }
+
     }
 }

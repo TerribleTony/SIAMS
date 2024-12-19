@@ -18,7 +18,7 @@ public class LogsController : Controller
     public async Task<IActionResult> Index()
     {
         var logs = await _context.Logs
-            .Include(l => l.User)  // Correctly include User as a navigation property
+            .Include(l => l.User) // Restore navigation property
             .OrderByDescending(l => l.Timestamp)
             .ToListAsync();
 

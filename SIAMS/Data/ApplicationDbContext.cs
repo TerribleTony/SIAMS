@@ -24,19 +24,20 @@ namespace SIAMS.Data
             // Ensure the database is created
             context.Database.Migrate();
 
-            // Check if users already exist
-            if (context.Users.Any()) return;
+            if (context.Users.Any(u => u.Username == "admin1")) return;
 
-            string admin1Password = Environment.GetEnvironmentVariable("ADMIN1_PASSWORD") ?? "DefaultSecurePassword1!";
-            string admin2Password = Environment.GetEnvironmentVariable("ADMIN2_PASSWORD") ?? "DefaultSecurePassword2!";
+            string admin1Password = GetEnvVarOrDefault("ADMIN1_PASSWORD", "DefaultSecurePassword1!");
+            string admin2Password = GetEnvVarOrDefault("ADMIN2_PASSWORD", "DefaultSecurePassword2!");
 
-            // Add default users securely
+            string admin1Salt = GenerateSalt();
+            string admin2Salt = GenerateSalt();
+
             context.Users.AddRange(
                 new User
                 {
                     Username = "admin1",
-                    PasswordHash = HashPassword(admin1Password, "kljasedefkjnbsdkhsef"),
-                    Salt = "RandomSaltValue1",
+                    PasswordHash = HashPassword(admin1Password, admin1Salt),
+                    Salt = admin1Salt,
                     Role = "Admin",
                     Email = "admin1@example.com",
                     IsEmailConfirmed = true
@@ -44,29 +45,48 @@ namespace SIAMS.Data
                 new User
                 {
                     Username = "admin2",
-                    PasswordHash = HashPassword(admin2Password, "kljasedefkjnbsdkhsef"),
-                    Salt = "RandomSaltValue2",
+                    PasswordHash = HashPassword(admin2Password, admin2Salt),
+                    Salt = admin2Salt,
                     Role = "Admin",
                     Email = "admin2@example.com",
                     IsEmailConfirmed = true
                 }
-
-
             );
+
             context.SaveChanges();
         }
 
-        // Password Hashing Method
+        private static string GenerateSalt()
+        {
+            byte[] saltBytes = new byte[16];
+            using (var rng = new System.Security.Cryptography.RNGCryptoServiceProvider())
+            {
+                rng.GetBytes(saltBytes);
+            }
+            return Convert.ToBase64String(saltBytes);
+        }
+
         private static string HashPassword(string password, string salt)
         {
             using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
             argon2.Salt = Encoding.UTF8.GetBytes(salt);
             argon2.DegreeOfParallelism = 8;   // Number of threads
-            argon2.MemorySize = 65536;        // Memory in KB (64MB)
-            argon2.Iterations = 4;            // Number of passes
+            argon2.MemorySize = 131072;        // Memory in KB (128MB)
+            argon2.Iterations = 6;            // Number of passes
 
             var hashBytes = argon2.GetBytes(32);  // 32-byte hash
             return Convert.ToBase64String(hashBytes);
         }
+
+        private static string GetEnvVarOrDefault(string key, string defaultValue)
+        {
+            var value = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrEmpty(value))
+            {
+                Console.WriteLine($"Warning: Environment variable '{key}' not set. Using default value.");
+            }
+            return value ?? defaultValue;
+        }
+
     }
 }

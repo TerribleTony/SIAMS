@@ -1,7 +1,7 @@
 name: PostgreSQL Backup
 
 on:
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:  # Manual trigger support
   schedule:
     - cron: "0 2 * * 0"  # Every Sunday at 2 AM UTC
 
@@ -17,20 +17,13 @@ jobs:
       run: sudo apt-get install -y postgresql-client
 
     - name: Perform Database Backup
+      env:
+        PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
       run: |
-        PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} pg_dump \
-          --host=${{ secrets.DATABASE_HOST }} \
+        pg_dump \
+          --host=dpg-ctdigk3v2p9s73ai5dog-a.frankfurt-postgres.render.com \
           --port=5432 \
-          --username=${{ secrets.DATABASE_USER }} \
-          --dbname=${{ secrets.DATABASE_NAME }} \
+          --username=siams_user \
+          --dbname=siams \
           --format=custom \
           --file=backup_$(date +%Y%m%d).dump
-
-    - name: Upload Backup to Repository (Optional)
-      run: |
-        git config user.name "GitHub Action"
-        git config user.email "action@github.com"
-        mv backup_*.dump backups/
-        git add backups/
-        git commit -m "Database backup $(date +%Y%m%d)"
-        git push

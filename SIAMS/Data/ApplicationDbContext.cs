@@ -19,7 +19,7 @@ namespace SIAMS.Data
 
     public static class DbInitializer
     {
-        public static void Seed(ApplicationDbContext context)
+        public static void Seed(ApplicationDbContext context, IConfiguration configuration)
         {
             // Ensure the database is created
             context.Database.Migrate();
@@ -27,12 +27,15 @@ namespace SIAMS.Data
             // Check if users already exist
             if (context.Users.Any()) return;
 
-            // Add default users
+            string admin1Password = Environment.GetEnvironmentVariable("ADMIN1_PASSWORD") ?? "DefaultSecurePassword1!";
+            string admin2Password = Environment.GetEnvironmentVariable("ADMIN2_PASSWORD") ?? "DefaultSecurePassword2!";
+
+            // Add default users securely
             context.Users.AddRange(
                 new User
                 {
                     Username = "admin1",
-                    PasswordHash = HashPassword("Admin1SecurePassword", "kljasedefkjnbsdkhsef"),
+                    PasswordHash = HashPassword(admin1Password, "kljasedefkjnbsdkhsef"),
                     Salt = "RandomSaltValue1",
                     Role = "Admin",
                     Email = "admin1@example.com",
@@ -41,14 +44,15 @@ namespace SIAMS.Data
                 new User
                 {
                     Username = "admin2",
-                    PasswordHash = HashPassword("Admin2SecurePassword", "kljasedefkjnbsdkhsef"),
+                    PasswordHash = HashPassword(admin2Password, "kljasedefkjnbsdkhsef"),
                     Salt = "RandomSaltValue2",
                     Role = "Admin",
                     Email = "admin2@example.com",
                     IsEmailConfirmed = true
                 }
-            );
 
+
+            );
             context.SaveChanges();
         }
 

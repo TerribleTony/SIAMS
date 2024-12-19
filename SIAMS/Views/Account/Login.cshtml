@@ -5,12 +5,22 @@
 }
 
 <h2>Login</h2>
+
+<!-- Display Errors -->
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+    </div>
+}
+
 @if (TempData["Message"] != null)
 {
     <div class="alert alert-success">
         @TempData["Message"]
     </div>
 }
+
 <form asp-action="Login" method="post">
     <div class="form-group">
         <label asp-for="Username" class="control-label"></label>
@@ -25,14 +35,10 @@
     </div>
 
     <button type="submit" class="btn btn-primary">Login</button>
-   
-
 </form>
-
 
 <hr />
 
-<!-- Create Account Link -->
 <p>
     Don’t have an account? <a asp-controller="Account" asp-action="Register">Create one here</a>.
 </p>

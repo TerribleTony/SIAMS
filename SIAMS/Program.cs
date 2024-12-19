@@ -94,8 +94,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate(); // Ensure DB schema is up-to-date
-        DbInitializer.Seed(context); // Seed default data
+        DbInitializer.Seed(context, builder.Configuration);  // Pass secrets
     }
     catch (Exception ex)
     {

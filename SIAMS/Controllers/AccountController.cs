@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 using SIAMS.Models;
 using SIAMS.Services;
+using System.Security.Cryptography;
 
 
 
@@ -220,11 +221,11 @@ namespace SIAMS.Controllers
         }
 
         // Password Hashing Helper Method
-        private static (string Hash, string Salt) HashPasswordArgon2(string password)
+        internal static (string Hash, string Salt) HashPasswordArgon2(string password)
         {
-            using var rng = new System.Security.Cryptography.RNGCryptoServiceProvider();
+            
             byte[] saltBytes = new byte[16];
-            rng.GetBytes(saltBytes);
+            RandomNumberGenerator.Fill(saltBytes);            
             string salt = Convert.ToBase64String(saltBytes);
 
             using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));

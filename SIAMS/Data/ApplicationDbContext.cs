@@ -1,6 +1,7 @@
 ﻿using Konscious.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using SIAMS.Models;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SIAMS.Data
@@ -59,10 +60,7 @@ namespace SIAMS.Data
         private static string GenerateSalt()
         {
             byte[] saltBytes = new byte[16];
-            using (var rng = new System.Security.Cryptography.RNGCryptoServiceProvider())
-            {
-                rng.GetBytes(saltBytes);
-            }
+            RandomNumberGenerator.Fill(saltBytes);
             return Convert.ToBase64String(saltBytes);
         }
 

@@ -61,18 +61,23 @@ namespace SIAMS.Tests.Controllers
 
         private void SeedTestData2()
         {
+            // Clear existing data
             _context.Users.RemoveRange(_context.Users);
             _context.SaveChanges();
 
+            // Corrected usage of HashPasswordArgon2
+            var (hashedPassword, salt) = AccountController.HashPasswordArgon2("CorrectPassword");
+
+            // Add test user
             _context.Users.Add(new User
             {
-               
                 Username = "ExistingUser",
-                PasswordHash = HashPasswordUsingReflection("CorrectPassword"),
+                PasswordHash = hashedPassword,
+                Salt = salt,
                 Email = "existinguser@example.com",
-                Role = "User",
                 IsEmailConfirmed = true
             });
+
             _context.SaveChanges();
         }
 
@@ -120,15 +125,22 @@ namespace SIAMS.Tests.Controllers
         }
 
 
-
-        private static string HashPasswordUsingReflection(string password)
+        [Fact]
+        public void HashPassword_ShouldReturnCorrectHash()
         {
-            var method = typeof(AccountController)
-                .GetMethod("HashPasswordArgon2", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            // Arrange
+            string password = "Test@1234";
 
-            return (string)method.Invoke(null, new object[] { password });
+            // Act
+            var (hash, salt) = AccountController.HashPasswordArgon2(password);
+
+            // Assert
+            Assert.NotNull(hash);
+            Assert.NotEmpty(hash);
+            Assert.NotEqual(password, hash);  // Ensure the hash differs from the raw password
+            Assert.NotNull(salt); // Ensure a salt was generated
+            Assert.NotEmpty(salt);
         }
-
 
         [Fact]
         public async Task Register_ShouldRedirectToLogin_WhenRegistrationSuccessful()

@@ -141,23 +141,35 @@ namespace SIAMS.Tests.Controllers
         }
 
         [Fact]
-        public async Task RequestAdmin_ShouldMarkRequest_WhenUserExists()
+        public async Task RequestAdmin_ShouldMarkRequest_WhenUserExists_AndNotAdmin()
         {
             // Arrange: Reset and seed data
             _context.Users.RemoveRange(_context.Users);
             _context.Logs.RemoveRange(_context.Logs);
             await _context.SaveChangesAsync();
 
-            SeedTestData();
+            // Seed test data
+            _context.Users.Add(new User
+            {
+                UserId = 1,
+                Username = "ExistingUser",
+                Role = "User",  // Not an admin initially
+                IsAdminRequested = false
+            });
+            _context.Users.Add(new User
+            {
+                UserId = 2,
+                Username = "AdminUser",
+                Role = "Admin",  // Already an admin
+                IsAdminRequested = false
+            });
+            await _context.SaveChangesAsync();
 
-            // Mock HttpContext with an authenticated user
+            // Mock HttpContext with an authenticated user who is **not an admin**
             var mockHttpContext = new DefaultHttpContext
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity(
-                    new[]
-                    {
-                new Claim(ClaimTypes.Name, "ExistingUser")
-                    }, "TestAuthType"))
+                    new[] { new Claim(ClaimTypes.Name, "ExistingUser") }, "TestAuthType"))
             };
 
             _controller.ControllerContext = new ControllerContext
@@ -169,10 +181,10 @@ namespace SIAMS.Tests.Controllers
             var tempDataMock = new Mock<ITempDataDictionary>();
             _controller.TempData = tempDataMock.Object;
 
-            // Act
+            // Act: Request admin access
             var result = await _controller.RequestAdmin() as RedirectToActionResult;
 
-            // Assert
+            // Assert: User's request should be marked and logged
             Assert.NotNull(result);
             Assert.Equal("Index", result.ActionName);
             Assert.Equal("UserProfile", result.ControllerName);
@@ -185,9 +197,29 @@ namespace SIAMS.Tests.Controllers
             Assert.NotNull(log);
             Assert.Equal("ExistingUser", log.PerformedBy);
 
-            // Verify TempData was set correctly
-            tempDataMock.VerifySet(t => t["Message"] = "Admin request submitted!", Times.Once);
+            // Verify TempData for non-admin user
+            tempDataMock.VerifySet(t => t["Message"] = "Admin request submitted successfully!", Times.Once);
+
+            // Act: Simulate an admin trying to request admin access
+            mockHttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+                new[] { new Claim(ClaimTypes.Name, "AdminUser") }, "TestAuthType"));
+
+            _controller.ControllerContext.HttpContext = mockHttpContext;
+
+            result = await _controller.RequestAdmin() as RedirectToActionResult;
+
+            // Assert: No changes should happen for an admin
+            var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "AdminUser");
+            Assert.NotNull(adminUser);
+            Assert.False(adminUser.IsAdminRequested);  // This should remain false
+
+            log = await _context.Logs.FirstOrDefaultAsync(l => l.PerformedBy == "AdminUser");
+            Assert.Null(log);  // No log should be created
+
+            // Verify TempData for admin user
+            tempDataMock.VerifySet(t => t["Message"] = "You are already an admin.", Times.Once);
         }
+
 
     }
 }

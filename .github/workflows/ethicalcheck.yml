@@ -29,6 +29,11 @@ jobs:
 
     - name: Print SARIF File Contents (Debug)
       run: cat ethicalcheck-results.sarif
+    - name: List SARIF File
+      run: ls -lah ethicalcheck-results.sarif
+
+    - name: Print SARIF File Contents (Debug)
+      run: cat ethicalcheck-results.sarif || echo "SARIF file is empty or not generated."
 
     - name: Upload SARIF File to Repository
       uses: github/codeql-action/upload-sarif@v3

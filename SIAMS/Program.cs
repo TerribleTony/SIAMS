@@ -88,6 +88,18 @@ builder.Logging.AddConsole();
 // Build the app
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();  // Detailed errors in Development
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");  // Custom error page in Production
+    app.UseHsts();
+}
+
+
 // Apply migrations and seed data
 using (var scope = app.Services.CreateScope())
 {

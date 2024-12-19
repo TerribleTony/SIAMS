@@ -7,10 +7,21 @@
 <h2>Create Account</h2>
 
 <!-- Feedback Alert Section -->
-@if (ViewData["Feedback"] != null)
+@if (TempData["Feedback"] != null)
 {
     <div class="alert alert-info">
-        @ViewData["Feedback"]
+        @TempData["Feedback"]
+    </div>
+}
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <ul>
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
     </div>
 }
 

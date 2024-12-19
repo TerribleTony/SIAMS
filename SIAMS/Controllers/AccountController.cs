@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using SIAMS.Data;
 using SIAMS.Models;
 using SIAMS.Services;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Moq;
+
+
 
 
 namespace SIAMS.Controllers
@@ -25,6 +25,17 @@ namespace SIAMS.Controllers
         {
             _context = context;
             _emailService = emailService;
+        }
+
+        private void LogAction(string action, string? performedBy)
+        {
+            _context.Logs.Add(new Log
+            {
+                Action = action,
+                Timestamp = DateTime.UtcNow,
+                PerformedBy = performedBy ?? "System"
+            });
+            _context.SaveChanges();
         }
 
 
@@ -51,24 +62,26 @@ namespace SIAMS.Controllers
         {
             if (!IsValidPassword(model.Password))
             {
-                ModelState.AddModelError("", "Password does not meet security requirements.");
+                ModelState.AddModelError("Password", "Password does not meet security requirements.");
+                LogAction("Failed registration attempt due to invalid password.", model.Username);
                 return View(model);
             }
 
             if (await _context.Users.AnyAsync(u => u.Username.ToLower() == model.Username.ToLower()))
             {
-                ModelState.AddModelError("", "The username is already taken.");
+                ModelState.AddModelError("Username", "The username is already taken.");
+                LogAction($"Failed registration: Username '{model.Username}' already exists.", model.Username);
                 return View(model);
             }
 
             if (await _context.Users.AnyAsync(u => u.Email.ToLower() == model.Email.ToLower()))
             {
-                ModelState.AddModelError("", "The email is already registered.");
+                ModelState.AddModelError("Email", "The email is already registered.");
+                LogAction($"Failed registration: Email '{model.Email}' already exists.", model.Username);
                 return View(model);
             }
 
             var emailConfirmationToken = Guid.NewGuid().ToString() ?? string.Empty;
-
             var hashedPassword = HashPasswordArgon2(model.Password);
 
             var user = new User
@@ -84,7 +97,8 @@ namespace SIAMS.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Send confirmation email only if token is valid
+            LogAction($"New user registered: Username '{model.Username}', Email '{model.Email}'.", model.Username);
+
             if (!string.IsNullOrEmpty(emailConfirmationToken))
             {
                 var confirmationLink = Url.Action(
@@ -100,18 +114,21 @@ namespace SIAMS.Controllers
             return RedirectToAction("Login", "Account");
         }
 
+       
 
         [HttpGet]
         public async Task<IActionResult> ConfirmEmail(string token, string email)
         {
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(email))
             {
+                LogAction("Invalid email confirmation request received.", email);
                 return BadRequest("Invalid email confirmation request.");
             }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.EmailConfirmationToken == token);
             if (user == null)
             {
+                LogAction("Email confirmation failed: User not found.", email);
                 return NotFound("User not found.");
             }
 
@@ -119,11 +136,12 @@ namespace SIAMS.Controllers
             user.EmailConfirmationToken = null; // Clear token
             await _context.SaveChangesAsync();
 
-          
+            LogAction($"Email confirmed successfully for user '{user.Username}'.", email);
 
             TempData["Message"] = "Email confirmed successfully!";
             return RedirectToAction("Login");
         }
+
 
         [HttpGet]
         public IActionResult Register()

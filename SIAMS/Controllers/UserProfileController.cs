@@ -110,9 +110,9 @@ namespace SIAMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RequestAdmin()
         {
-            var username = User.Identity?.Name;
+            var username = User?.Identity?.Name;
 
-            if (username == null)
+            if (string.IsNullOrEmpty(username))
             {
                 TempData["Error"] = "You must be logged in to request admin access.";
                 return RedirectToAction("Index", "Home");
@@ -120,17 +120,25 @@ namespace SIAMS.Controllers
 
             // Find the current user
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user != null && !user.IsAdminRequested)
+
+            if (user == null)
+            {
+                TempData["Error"] = "User not recognized.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (!user.IsAdminRequested)
             {
                 // Update the user's admin request status
                 user.IsAdminRequested = true;
 
-                // Log the request
+                // Log the request with UserId
                 _context.Logs.Add(new Log
                 {
-                    Action = $"{username} requested admin access.",
+                    UserId = user.UserId,   // Correct User ID
+                    Action = $"User '{user.Username}' requested admin access.",
                     Timestamp = DateTime.UtcNow,
-                    PerformedBy = username
+                    PerformedBy = user.Username  // For backward compatibility
                 });
 
                 await _context.SaveChangesAsync();
@@ -144,6 +152,7 @@ namespace SIAMS.Controllers
 
             return RedirectToAction("Index", "UserProfile");
         }
+
 
     }
 }

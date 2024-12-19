@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +30,7 @@ namespace SIAMS.Controllers
             return View(await applicationDbContext.ToListAsync());
         }
 
-        // GET: Assets/Details/5
+        // GET: Assets/Details
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -55,23 +56,44 @@ namespace SIAMS.Controllers
             return View();
         }
 
+        // POST: Assets/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("AssetId,AssetName,Category,AssignedUserId")] Asset asset)
         {
             if (ModelState.IsValid)
             {
+                // Add the asset to the database
                 _context.Add(asset);
 
-                // Log the action
+                // Retrieve the current user
+                var username = User?.Identity?.Name;
+                if (string.IsNullOrEmpty(username))
+                {
+                    TempData["Error"] = "User not recognized.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var currentUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Username == username);
+
+                if (currentUser == null)
+                {
+                    TempData["Error"] = "User not recognized.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Log the asset creation action
                 _context.Logs.Add(new Log
                 {
+                    UserId = currentUser.UserId,   // Correct User ID
                     Action = $"Asset '{asset.AssetName}' created.",
                     Timestamp = DateTime.UtcNow,
-                    PerformedBy = User?.Identity?.Name ?? "System"
+                    PerformedBy = currentUser.Username  // Correct username reference
                 });
 
                 await _context.SaveChangesAsync();
+                TempData["Success"] = "Asset created successfully.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -80,30 +102,35 @@ namespace SIAMS.Controllers
         }
 
 
-        // GET: Assets/Edit/5
+        // GET: Assets/Edit
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
             {
+                TempData["Error"] = "Asset ID not provided.";
                 return NotFound();
             }
 
             var asset = await _context.Assets.FindAsync(id);
             if (asset == null)
             {
+                TempData["Error"] = "Asset not found.";
                 return NotFound();
             }
+
             ViewData["AssignedUserId"] = new SelectList(_context.Users, "UserId", "Username", asset.AssignedUserId);
             return View(asset);
         }
 
-        // POST: Assets/Edit/5
+        // POST: Assets/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("AssetId,AssetName,Category,AssignedUserId")] Asset asset)
         {
             if (id != asset.AssetId)
             {
+                TempData["Error"] = "Asset ID mismatch.";
                 return NotFound();
             }
 
@@ -111,17 +138,31 @@ namespace SIAMS.Controllers
             {
                 try
                 {
+                    // Update asset
                     _context.Update(asset);
 
-                    // Log the action
-                    _context.Logs.Add(new Log
+                    // Retrieve current user
+                    var username = User?.Identity?.Name;
+                    if (!string.IsNullOrEmpty(username))
                     {
-                        Action = $"Asset '{asset.AssetName}' updated.",
-                        Timestamp = DateTime.UtcNow,
-                        PerformedBy = User?.Identity?.Name ?? "System"
-                    });
+                        var currentUser = await _context.Users
+                            .FirstOrDefaultAsync(u => u.Username == username);
+
+                        if (currentUser != null)
+                        {
+                            // Log the action
+                            _context.Logs.Add(new Log
+                            {
+                                UserId = currentUser.UserId,   // Correct User ID
+                                Action = $"Asset '{asset.AssetName}' updated.",
+                                Timestamp = DateTime.UtcNow,
+                                PerformedBy = currentUser.Username  // Correct username reference
+                            });
+                        }
+                    }
 
                     await _context.SaveChangesAsync();
+                    TempData["Success"] = "Asset updated successfully.";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -141,48 +182,77 @@ namespace SIAMS.Controllers
             return View(asset);
         }
 
-
-        // GET: Assets/Delete/5
+        // GET: Assets/Delete
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
             {
+                TempData["Error"] = "Asset ID not provided.";
                 return NotFound();
             }
 
             var asset = await _context.Assets
                 .Include(a => a.AssignedUser)
                 .FirstOrDefaultAsync(m => m.AssetId == id);
+
             if (asset == null)
             {
+                TempData["Error"] = "Asset not found.";
                 return NotFound();
             }
 
             return View(asset);
         }
 
-        // POST: Assets/Delete/5
+        // POST: Assets/Delete
         [HttpPost, ActionName("Delete")]
+        
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var asset = await _context.Assets.FindAsync(id);
-            if (asset != null)
+            if (asset == null)
             {
-                _context.Assets.Remove(asset);
-
-                // Log the action
-                _context.Logs.Add(new Log
-                {
-                    Action = $"Asset '{asset.AssetName}' deleted.",
-                    Timestamp = DateTime.UtcNow,
-                    PerformedBy = User?.Identity?.Name ?? "System"
-                });
-
-                await _context.SaveChangesAsync();
+                TempData["Error"] = "Asset not found.";
+                return RedirectToAction(nameof(Index));
             }
+            
+            // Find the current user
+            var username = User?.Identity?.Name;
+            if (string.IsNullOrEmpty(username))
+            {
+                TempData["Error"] = "User not recognized.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var currentUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == username);
+
+            if (currentUser == null)
+            {
+                TempData["Error"] = "User not recognized.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Delete the asset
+            _context.Assets.Remove(asset);
+
+            // Log the deletion action
+            _context.Logs.Add(new Log
+            {
+                UserId = currentUser.UserId,   // Correct User ID
+                Action = $"Asset '{asset.AssetName}' deleted.",
+                Timestamp = DateTime.UtcNow,
+                PerformedBy = currentUser.Username  // Correct username reference
+            });
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Asset deleted successfully.";
             return RedirectToAction(nameof(Index));
         }
+
 
         private bool AssetExists(int id)
         {

@@ -233,14 +233,14 @@ namespace SIAMS.Tests.Controllers
                 .Returns("http://mock-confirmation-link");
 
             _controller.Url = mockUrlHelper.Object;
-
+           
             // Act
             var result = await _controller.Register(model) as ViewResult;
 
             // Assert
             Assert.NotNull(result);
             Assert.False(_controller.ModelState.IsValid, "ModelState should be invalid.");
-            Assert.Contains("The username is already taken.", _controller.ModelState[""].Errors[0].ErrorMessage);
+            Assert.Contains("The username is already taken.", _controller.ModelState["Username"].Errors[0].ErrorMessage);
         }
 
 

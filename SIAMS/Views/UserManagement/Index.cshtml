@@ -42,6 +42,11 @@
                             <input type="hidden" name="userId" value="@user.UserId" />
                             <button type="submit" class="btn btn-success btn-sm">Approve</button>
                         </form>
+                        <form method="post" asp-action="RejectAdminRequest" asp-route-userId="@user.UserId" class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </form>
                     </td>
                 </tr>
             }
@@ -53,7 +58,7 @@ else
     <p class="text-muted">No pending admin requests.</p>
 }
 
-<!-- Existing User Management Table -->
+
 <h4 class="mt-5">All Users</h4>
 <table class="table table-striped">
     <thead>

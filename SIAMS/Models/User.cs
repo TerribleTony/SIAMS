@@ -28,5 +28,6 @@ namespace SIAMS.Models
 
         public bool IsEmailConfirmed { get; set; } = false;
         public string? EmailConfirmationToken { get; set; }
+
     }
 }

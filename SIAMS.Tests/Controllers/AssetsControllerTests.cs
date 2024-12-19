@@ -7,6 +7,9 @@ using SIAMS.Data;
 using SIAMS.Models;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace SIAMS.Tests.Controllers
 {
@@ -104,6 +107,26 @@ namespace SIAMS.Tests.Controllers
                 AssignedUserId = 1
             };
 
+            _controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
+            {
+                ["Success"] = null  // Initialize to avoid null reference issues
+            };
+
+            // Mock the authenticated user
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.Name, "TestUser"),
+                new Claim(ClaimTypes.Role, "Admin")
+            }, "mock"));
+
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = user
+                }
+            };
+
             // Act
             var result = await _controller.Create(asset) as RedirectToActionResult;
 
@@ -119,6 +142,31 @@ namespace SIAMS.Tests.Controllers
         [Fact]
         public async Task DeleteConfirmed_ShouldRedirectToIndex_WhenAssetExists()
         {
+
+            SeedTestData();
+            // Mock the authenticated user
+            var mockUser = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.Name, "TestUser"),
+                new Claim(ClaimTypes.Role, "Admin")
+            }, "mock"));
+
+
+            // Assign to ControllerContext
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = mockUser
+                }
+            };
+
+            // Mock TempData
+            _controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
+            {
+                ["Success"] = null  // Initialize to avoid null references
+            };
+
             // Act
             var result = await _controller.DeleteConfirmed(1) as RedirectToActionResult;
 
@@ -132,6 +180,31 @@ namespace SIAMS.Tests.Controllers
         [Fact]
         public async Task DeleteConfirmed_ShouldReturnRedirect_WhenAssetDoesNotExist()
         {
+            SeedTestData();
+
+            // Mock the authenticated user
+            var mockUser = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.Name, "TestUser"),
+                new Claim(ClaimTypes.Role, "Admin")
+            }, "mock"));
+
+
+            // Assign to ControllerContext
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = mockUser
+                }
+            };
+
+            // Mock TempData
+            _controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
+            {
+                ["Success"] = null  // Initialize to avoid null references
+            };
+
             // Act
             var result = await _controller.DeleteConfirmed(999) as RedirectToActionResult;
 

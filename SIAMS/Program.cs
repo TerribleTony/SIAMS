@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SIAMS.Data;
 using SIAMS.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,6 +89,11 @@ builder.Services.AddAuthorization(options =>
 // Add MVC services
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
+
 // Enable logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -130,6 +136,13 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000); // HTTP
+    options.ListenAnyIP(8080); // HTTPS (as required by Render)
+});
+
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

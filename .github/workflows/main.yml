@@ -1,0 +1,35 @@
+name: PostgreSQL Backup
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"  # Every Sunday at 2 AM UTC
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Install PostgreSQL Client
+      run: sudo apt-get install -y postgresql-client
+
+    - name: Perform Database Backup
+      run: |
+        PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} pg_dump \
+          --host=${{ secrets.DATABASE_HOST }} \
+          --port=5432 \
+          --username=${{ secrets.DATABASE_USER }} \
+          --dbname=${{ secrets.DATABASE_NAME }} \
+          --format=custom \
+          --file=backup_$(date +%Y%m%d).dump
+
+    - name: Upload Backup to Repository (Optional)
+      run: |
+        git config user.name "GitHub Action"
+        git config user.email "action@github.com"
+        mv backup_*.dump backups/
+        git add backups/
+        git commit -m "Database backup $(date +%Y%m%d)"
+        git push

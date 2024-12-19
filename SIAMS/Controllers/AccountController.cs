@@ -8,7 +8,7 @@ using SIAMS.Data;
 using SIAMS.Models;
 using SIAMS.Services;
 using System.Security.Cryptography;
-
+using Microsoft.Extensions.Configuration;  
 
 
 
@@ -18,14 +18,15 @@ namespace SIAMS.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
 
 
-
-        public AccountController(ApplicationDbContext context, IEmailService emailService)
+        public AccountController(ApplicationDbContext context, IEmailService emailService, IConfiguration configuration)
         {
             _context = context;
             _emailService = emailService;
+            _configuration = configuration;
         }
 
         private void LogAction(string action, string? performedBy)
@@ -82,8 +83,13 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
+
+            // Use environment variable in production, fallback to config during development
+            var pepper = Environment.GetEnvironmentVariable("PEPPER") ??
+                         _configuration["Security:Pepper"];  // Local fallback
             var emailConfirmationToken = Guid.NewGuid().ToString();
-            var (passwordHash, salt) = HashPasswordArgon2(model.Password);
+            var (passwordHash, salt) = HashPasswordArgon2(model.Password, pepper);
+
 
             var user = new User
             {
@@ -160,7 +166,7 @@ namespace SIAMS.Controllers
         }
 
         // Handle Login Form Submission (POST)
-       
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -174,8 +180,11 @@ namespace SIAMS.Controllers
                 return View(model);
             }
 
-            // Verify Password
-            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(model.Password));
+            // Retrieve Pepper
+            string pepper = Environment.GetEnvironmentVariable("PEPPER") ?? _configuration["Security:Pepper"];
+
+            // Verify Password (with Pepper)
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(model.Password + pepper));
             argon2.Salt = Convert.FromBase64String(user.Salt);
             argon2.DegreeOfParallelism = 8;
             argon2.MemorySize = 65536;
@@ -197,10 +206,10 @@ namespace SIAMS.Controllers
 
             // Create Authentication Cookie
             var claims = new List<System.Security.Claims.Claim>
-    {
-        new(System.Security.Claims.ClaimTypes.Name, user.Username),
-        new(System.Security.Claims.ClaimTypes.Role, user.Role)
-    };
+            {
+                new(System.Security.Claims.ClaimTypes.Name, user.Username),
+                new(System.Security.Claims.ClaimTypes.Role, user.Role)
+            };
 
             var identity = new System.Security.Claims.ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new System.Security.Claims.ClaimsPrincipal(identity);
@@ -209,6 +218,7 @@ namespace SIAMS.Controllers
 
             return RedirectToAction("Index", "Home");
         }
+
 
 
         // Logout Logic
@@ -221,21 +231,25 @@ namespace SIAMS.Controllers
         }
 
         // Password Hashing Helper Method
-        internal static (string Hash, string Salt) HashPasswordArgon2(string password)
+        internal static (string Hash, string Salt) HashPasswordArgon2(string password, string pepper)
         {
-            
+            // Generate unique salt
             byte[] saltBytes = new byte[16];
-            RandomNumberGenerator.Fill(saltBytes);            
+            RandomNumberGenerator.Fill(saltBytes);
             string salt = Convert.ToBase64String(saltBytes);
 
-            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
-            argon2.Salt = saltBytes;
-            argon2.DegreeOfParallelism = 8;
-            argon2.MemorySize = 65536;
-            argon2.Iterations = 4;
+            // Combine password + pepper
+            string passwordWithPepper = password + pepper;
 
-            var hashBytes = argon2.GetBytes(32);
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(passwordWithPepper));
+            argon2.Salt = saltBytes;
+            argon2.DegreeOfParallelism = 8;  // Threads
+            argon2.MemorySize = 65536;       // Memory in KB (64MB)
+            argon2.Iterations = 4;           // Number of passes
+
+            var hashBytes = argon2.GetBytes(32);  // 32-byte hash
             return (Convert.ToBase64String(hashBytes), salt);
         }
+
     }
 }

@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
+
 
 namespace SIAMS.Tests.Controllers
 {
@@ -20,6 +22,8 @@ namespace SIAMS.Tests.Controllers
         private readonly AccountController _controller;
         private readonly Mock<IEmailService> _mockEmailService;
         private readonly ApplicationDbContext _context;
+        private readonly Mock<IConfiguration> _mockConfiguration;
+
 
         public AccountControllerTests()
         {
@@ -29,7 +33,12 @@ namespace SIAMS.Tests.Controllers
 
             _context = new ApplicationDbContext(options);
             _mockEmailService = new Mock<IEmailService>();
-            _controller = new AccountController(_context, _mockEmailService.Object);
+
+            // Mock IConfiguration
+            _mockConfiguration = new Mock<IConfiguration>();
+            _mockConfiguration.SetupGet(x => x["Security:Pepper"]).Returns("TestPepper");
+
+            _controller = new AccountController(_context, _mockEmailService.Object, _mockConfiguration.Object);
 
             _controller.ControllerContext = new ControllerContext
             {
@@ -61,14 +70,12 @@ namespace SIAMS.Tests.Controllers
 
         private void SeedTestData2()
         {
-            // Clear existing data
             _context.Users.RemoveRange(_context.Users);
             _context.SaveChanges();
 
-            // Corrected usage of HashPasswordArgon2
-            var (hashedPassword, salt) = AccountController.HashPasswordArgon2("CorrectPassword");
+            string pepper = "TestPepper";  // Ensure it matches the mocked value
+            var (hashedPassword, salt) = AccountController.HashPasswordArgon2("CorrectPassword", pepper);
 
-            // Add test user
             _context.Users.Add(new User
             {
                 Username = "ExistingUser",
@@ -80,6 +87,8 @@ namespace SIAMS.Tests.Controllers
 
             _context.SaveChanges();
         }
+
+
 
 
         private void InitializeControllerWithHttpContextAndTempData()
@@ -130,9 +139,10 @@ namespace SIAMS.Tests.Controllers
         {
             // Arrange
             string password = "Test@1234";
+            string pepper = _mockConfiguration.Object["Security:Pepper"];
 
             // Act
-            var (hash, salt) = AccountController.HashPasswordArgon2(password);
+            var (hash, salt) = AccountController.HashPasswordArgon2(password, pepper);
 
             // Assert
             Assert.NotNull(hash);
@@ -141,6 +151,7 @@ namespace SIAMS.Tests.Controllers
             Assert.NotNull(salt); // Ensure a salt was generated
             Assert.NotEmpty(salt);
         }
+
 
         [Fact]
         public async Task Register_ShouldRedirectToLogin_WhenRegistrationSuccessful()
@@ -197,24 +208,20 @@ namespace SIAMS.Tests.Controllers
                 Times.Once);
         }
 
-     
         [Fact]
         public async Task Login_ShouldRedirectToHome_WhenCredentialsAreValid()
         {
             InitializeControllerWithHttpContextAndTempData();
-
-            // Ensure database context initialization
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString())  // Unique DB for isolation
-                .Options;
-
             SeedTestData2();
-            // Arrange
+
             var model = new LoginViewModel
             {
                 Username = "ExistingUser",
                 Password = "CorrectPassword"
             };
+
+            // Simulate environment variable setup for pepper
+            Environment.SetEnvironmentVariable("PEPPER", "TestPepper");
 
             // Act
             var result = await _controller.Login(model) as RedirectToActionResult;
@@ -225,7 +232,8 @@ namespace SIAMS.Tests.Controllers
             Assert.Equal("Home", result.ControllerName);
         }
 
-        
+
+
         [Fact]
         public async Task Register_ShouldReturnViewWithErrors_WhenUsernameAlreadyExists()
         {

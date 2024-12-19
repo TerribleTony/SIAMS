@@ -27,9 +27,14 @@ namespace SIAMS.Data
 
             if (context.Users.Any(u => u.Username == "admin1")) return;
 
+            // Get environment variables or default values
             string admin1Password = GetEnvVarOrDefault("ADMIN1_PASSWORD", "DefaultSecurePassword1!");
             string admin2Password = GetEnvVarOrDefault("ADMIN2_PASSWORD", "DefaultSecurePassword2!");
 
+            // Use pepper from environment or appsettings
+            string pepper = Environment.GetEnvironmentVariable("PEPPER") ?? configuration["Security:Pepper"];
+
+            // Generate salts for each admin user
             string admin1Salt = GenerateSalt();
             string admin2Salt = GenerateSalt();
 
@@ -37,7 +42,7 @@ namespace SIAMS.Data
                 new User
                 {
                     Username = "admin1",
-                    PasswordHash = HashPassword(admin1Password, admin1Salt),
+                    PasswordHash = HashPassword(admin1Password, admin1Salt, pepper),
                     Salt = admin1Salt,
                     Role = "Admin",
                     Email = "admin1@example.com",
@@ -46,7 +51,7 @@ namespace SIAMS.Data
                 new User
                 {
                     Username = "admin2",
-                    PasswordHash = HashPassword(admin2Password, admin2Salt),
+                    PasswordHash = HashPassword(admin2Password, admin2Salt, pepper),
                     Salt = admin2Salt,
                     Role = "Admin",
                     Email = "admin2@example.com",
@@ -64,13 +69,13 @@ namespace SIAMS.Data
             return Convert.ToBase64String(saltBytes);
         }
 
-        private static string HashPassword(string password, string salt)
+        private static string HashPassword(string password, string salt, string pepper)
         {
-            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password));
+            using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password + pepper));
             argon2.Salt = Encoding.UTF8.GetBytes(salt);
-            argon2.DegreeOfParallelism = 8;   // Number of threads
-            argon2.MemorySize = 131072;        // Memory in KB (128MB)
-            argon2.Iterations = 6;            // Number of passes
+            argon2.DegreeOfParallelism = 8;  // Number of threads
+            argon2.MemorySize = 131072;      // Memory in KB (128MB)
+            argon2.Iterations = 6;           // Number of passes
 
             var hashBytes = argon2.GetBytes(32);  // 32-byte hash
             return Convert.ToBase64String(hashBytes);
@@ -87,3 +92,4 @@ namespace SIAMS.Data
         }
     }
 }
+

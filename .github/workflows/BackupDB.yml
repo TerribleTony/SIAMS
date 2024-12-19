@@ -1,0 +1,47 @@
+name: PostgreSQL Backup
+
+on:
+  workflow_dispatch:  # Allow manual runs
+  schedule:
+    - cron: "0 2 * * 0"  # Every Sunday at 2 AM UTC
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set Up PostgreSQL Repository
+      run: |
+        echo "Adding PostgreSQL APT repository..."
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+        sudo apt-get update
+
+    - name: Install PostgreSQL Client 16
+      run: |
+        echo "Installing PostgreSQL 16 client..."
+        sudo apt-get install -y postgresql-client-16
+
+    - name: Run pg_dump
+      env:
+        PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+      run: |
+        echo "Running pg_dump..."
+        pg_dump \
+          --host=dpg-ctdigk3v2p9s73ai5dog-a.frankfurt-postgres.render.com \
+          --port=5432 \
+          --username=siams_user \
+          --dbname=siams \
+          --format=custom \
+          --file=backup_$(date +%Y%m%d).dump
+
+    - name: Upload PostgreSQL Backup as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: postgres-backup
+        path: backup_*.dump

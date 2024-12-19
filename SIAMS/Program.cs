@@ -60,6 +60,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8); // Extend cookie lifetime
+        options.SlidingExpiration = true; // Automatically renew cookie on activity
     });
 
 builder.Services.AddAuthorization(options =>

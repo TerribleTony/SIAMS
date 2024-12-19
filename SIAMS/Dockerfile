@@ -22,5 +22,8 @@ COPY --from=build /app/SIAMS/out .
 # Ensure key storage directory exists
 RUN mkdir /app/keys
 
+VOLUME /app/keys
+
+
 # Set the entry point
 ENTRYPOINT ["dotnet", "SIAMS.dll"]

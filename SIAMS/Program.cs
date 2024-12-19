@@ -44,6 +44,8 @@ if (connectionString.StartsWith("postgres://"))
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, opt => opt.MigrationsAssembly("SIAMS")));
 
+builder.Logging.AddConsole()
+    .SetMinimumLevel(LogLevel.Debug);
 // Configure Email Services
 var emailConfig = builder.Configuration.GetSection("Email").Get<EmailConfig>();
 if (emailConfig == null)

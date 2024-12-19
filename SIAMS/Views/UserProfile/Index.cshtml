@@ -7,6 +7,23 @@
 
 <div class="mb-4">
     <h4>Your Profile</h4>
+   
+    <!-- Display Success Message -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Message"]
+        </div>
+    }
+
+    <!-- Display Error Message -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
     <ul>
         <li><strong>Email:</strong> @Model.User.Email</li>
         <li><strong>Role:</strong> @Model.User.Role</li>

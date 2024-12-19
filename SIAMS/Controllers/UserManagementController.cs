@@ -24,9 +24,15 @@ namespace SIAMS.Controllers
             return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
         }
 
-        public async Task<IActionResult> Index()
+        // GET: UserManagement/Index
+        [HttpGet]
+        public async Task<IActionResult> Index(bool showDeleted = false)
         {
-            var users = await _context.Users.ToListAsync();
+            var users = await _context.Users
+                .Where(u => showDeleted || !u.IsDeleted)
+                .ToListAsync();
+
+            ViewBag.ShowDeleted = showDeleted;
             return View(users);
         }
 
@@ -52,7 +58,46 @@ namespace SIAMS.Controllers
 
             return View(user);
         }
+        // GET: UserManagement/ShowDeleted
+        [HttpGet]
+        public async Task<IActionResult> ShowDeleted()
+        {
+            var deletedUsers = await _context.Users
+                .Where(u => u.IsDeleted)
+                .ToListAsync();
 
+            return View("Index", deletedUsers); // Reuse the existing view
+        }
+
+        // POST: UserManagement/RestoreUser
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreUser(int userId)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found or already active.";
+                return RedirectToAction("Index");
+            }
+
+            user.IsDeleted = false;
+
+            // Log the action
+            var currentAdmin = await GetCurrentUser();
+            _context.Logs.Add(new Log
+            {
+                UserId = user.UserId,
+                Action = $"User '{user.Username}' was restored by '{currentAdmin.Username}'.",
+                Timestamp = DateTime.UtcNow,
+                PerformedBy = currentAdmin.Username
+            });
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"User '{user.Username}' has been successfully restored!";
+            return RedirectToAction("Index");
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]

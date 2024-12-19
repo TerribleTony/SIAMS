@@ -173,7 +173,7 @@ namespace SIAMS.Controllers
         {
             if (!ModelState.IsValid) return View(model);
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username && !u.IsDeleted);
             if (user == null)
             {
                 ModelState.AddModelError("", "Invalid username or password.");

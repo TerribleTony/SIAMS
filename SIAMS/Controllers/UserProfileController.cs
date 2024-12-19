@@ -105,6 +105,7 @@ namespace SIAMS.Controllers
             return RedirectToAction("Index");
         }
 
+   
         // POST: /UserProfile/RequestAdmin
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -119,12 +120,19 @@ namespace SIAMS.Controllers
             }
 
             // Find the current user
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username && !u.IsDeleted);
 
             if (user == null)
             {
-                TempData["Error"] = "User not recognized.";
-                return RedirectToAction("Index", "Home");
+                TempData["Error"] = "User not recognized or account has been deleted.";
+                return RedirectToAction("Index");
+            }
+
+            // Check if the user is already an admin
+            if (user.Role == "Admin")
+            {
+                TempData["Message"] = "You are already an admin.";
+                return RedirectToAction("Index", "UserProfile");
             }
 
             if (!user.IsAdminRequested)
@@ -132,26 +140,27 @@ namespace SIAMS.Controllers
                 // Update the user's admin request status
                 user.IsAdminRequested = true;
 
-                // Log the request with UserId
+                // Log the request
                 _context.Logs.Add(new Log
                 {
-                    UserId = user.UserId,   // Correct User ID
+                    UserId = user.UserId,
                     Action = $"User '{user.Username}' requested admin access.",
                     Timestamp = DateTime.UtcNow,
-                    PerformedBy = user.Username  // For backward compatibility
+                    PerformedBy = user.Username
                 });
 
                 await _context.SaveChangesAsync();
 
-                TempData["Message"] = "Admin request submitted!";
+                TempData["Message"] = "Admin request submitted successfully!";
             }
             else
             {
-                TempData["Error"] = "Admin request could not be processed.";
+                TempData["Error"] = "You have already requested admin access.";
             }
 
             return RedirectToAction("Index", "UserProfile");
         }
+
 
 
     }

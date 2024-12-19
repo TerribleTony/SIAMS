@@ -2,27 +2,28 @@
 
 <h2>Manage Users</h2>
 
+<!-- Success/Error Notifications -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<!-- Toggle Deleted Users Button -->
+<form method="get" asp-action="Index" class="mb-3">
+    <input type="hidden" name="showDeleted" value="@(ViewBag.ShowDeleted ? "false" : "true")" />
+    <button type="submit" class="btn btn-secondary">
+        @(ViewBag.ShowDeleted ? "Hide Deleted Users" : "Show Deleted Users")
+    </button>
+</form>
+
 <!-- Admin Requests Section -->
-@if (Model.Any(u => u.IsAdminRequested))
+@if (Model.Any(u => u.IsAdminRequested && !u.IsDeleted))
 {
     <h4>Pending Admin Requests</h4>
-
-    <!-- Success Notification -->
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success">
-            @TempData["Success"]
-        </div>
-    }
-
-    <!-- Error Notification -->
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger">
-            @TempData["Error"]
-        </div>
-    }
-
     <table class="table table-striped">
         <thead>
             <tr>
@@ -43,9 +44,7 @@
                             <button type="submit" class="btn btn-success btn-sm">Approve</button>
                         </form>
                         <form method="post" asp-action="RejectAdminRequest" asp-route-userId="@user.UserId" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm">
-                                <i class="fas fa-times"></i> Reject
-                            </button>
+                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
                         </form>
                     </td>
                 </tr>
@@ -58,7 +57,7 @@ else
     <p class="text-muted">No pending admin requests.</p>
 }
 
-
+<!-- User Management Table -->
 <h4 class="mt-5">All Users</h4>
 <table class="table table-striped">
     <thead>
@@ -70,17 +69,27 @@ else
         </tr>
     </thead>
     <tbody>
-        @foreach (var user in Model.Where(u => !u.IsDeleted))
+        @foreach (var user in Model)
         {
             <tr>
                 <td>@user.Username</td>
                 <td>@user.Email</td>
                 <td>@user.Role</td>
                 <td>
-                    <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-warning btn-sm">Edit</a>
-                    <form asp-action="Delete" asp-route-id="@user.UserId" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
+                    @if (user.IsDeleted)
+                    {
+                        <form asp-action="RestoreUser" method="post" class="d-inline">
+                            <input type="hidden" name="userId" value="@user.UserId" />
+                            <button type="submit" class="btn btn-success btn-sm">Restore</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-warning btn-sm">Edit</a>
+                        <form asp-action="Delete" asp-route-id="@user.UserId" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    }
                 </td>
             </tr>
         }

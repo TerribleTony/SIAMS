@@ -1,0 +1,41 @@
+name: EthicalCheck-Workflow
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '30 12 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  Trigger_EthicalCheck:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: EthicalCheck - Free & Automated API Security Testing Service
+      uses: apisec-inc/ethicalcheck-action@005fac321dd843682b1af6b72f30caaf9952c641
+      with:
+        oas-url: "http://netbanking.apisec.ai:8080/v2/api-docs"
+        sarif-result-file: "ethicalcheck-results.sarif"
+
+    - name: Verify SARIF File Creation
+      run: ls -lah ethicalcheck-results.sarif
+
+    - name: Print SARIF File Contents (Debug)
+      run: cat ethicalcheck-results.sarif
+    - name: List SARIF File
+      run: ls -lah ethicalcheck-results.sarif
+
+    - name: Print SARIF File Contents (Debug)
+      run: cat ethicalcheck-results.sarif || echo "SARIF file is empty or not generated."
+
+    - name: Upload SARIF File to Repository
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ethicalcheck-results.sarif
